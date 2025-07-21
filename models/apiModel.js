@@ -35,31 +35,42 @@ const getCollectionsByUser = (user_id, callback) => {
 
 const addRequest = (data, callback) => {
   db.getConnection((err, connection) => {
-    if (err) return callback(err, null);
+    if (err) return callback(err);
 
     const sql = `
-      INSERT INTO tbl_api_requests
+      INSERT INTO tbl_api_requests 
       (collection_id, user_id, name, method, url, body)
       VALUES (?, ?, ?, ?, ?, ?)
     `;
-
     const values = [
       data.collection_id,
       data.user_id,
       data.name,
       data.method,
-      data.url || '',
-      data.body || ''
+      data.url,
+      data.body
     ];
 
     connection.query(sql, values, (err, result) => {
-      connection.release(); // Always release the connection
-      if (err) return callback(err, null);
+      connection.release();
+      if (err) return callback(err);
       callback(null, result.insertId);
     });
   });
 };
 
+const getRequestById = (id, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = `SELECT * FROM tbl_api_requests WHERE id = ?`;
+    connection.query(sql, [id], (err, results) => {
+      connection.release();
+      if (err) return callback(err);
+      callback(null, results[0]);
+    });
+  });
+};
 const getRequestsByCollectionId = (collection_id, callback) => {
   db.getConnection((err, connection) => {
     if (err) {
@@ -81,9 +92,13 @@ const getRequestsByCollectionId = (collection_id, callback) => {
   });
 };
 
+
+
+
 module.exports = {
   addCollection,
   getCollectionsByUser,
   addRequest,
-  getRequestsByCollectionId
+  getRequestsByCollectionId,
+  getRequestById,
 };

@@ -52,24 +52,38 @@ const getCollections = (req, res) => {
 
 const addRequest = (req, res) => {
   const { collection_id, name, method, url, body } = req.body;
-  const user_id = req.session?.user?.id || req.body.user_id; // Adjust if session-based login
+  const user_id = req.session?.user?.id || req.body.user_id;
 
   if (!user_id || !collection_id || !name || !method) {
     return res.status(400).json({ status: false, message: "Missing required fields" });
   }
 
-  const requestData = { collection_id, user_id, name, method, url, body };
+  const requestData = {
+    collection_id,
+    user_id,
+    name,
+    method,
+    url: url || '',
+    body: body || ''
+  };
 
   apiModel.addRequest(requestData, (err, insertId) => {
     if (err) {
-      console.error("DB Error:", err);
-      return res.status(500).json({ status: false, message: "Database error" });
+      console.error("DB Insert Error:", err);
+      return res.status(500).json({ status: false, message: "Database insert error" });
     }
 
-    res.json({
-      status: true,
-      message: "Request added successfully",
-      request_id: insertId
+    apiModel.getRequestById(insertId, (fetchErr, request) => {
+      if (fetchErr || !request) {
+        console.error("DB Fetch Error:", fetchErr);
+        return res.status(500).json({ status: false, message: "Failed to retrieve newly inserted request" });
+      }
+
+      res.json({
+        status: true,
+        message: "Request added successfully",
+        request
+      });
     });
   });
 };
