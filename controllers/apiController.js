@@ -108,9 +108,32 @@ const getRequestsByCollectionId = (req, res) => {
   });
 };
 
+const updateRequest = (req, res) => {
+  const id = req.params.id;
+  const changes = req.body;
+
+  if (!id) {
+    return res.status(400).json({ status: false, message: "Missing request id" });
+  }
+
+  if (!changes || Object.keys(changes).length === 0) {
+    return res.status(400).json({ status: false, message: "No update data provided" });
+  }
+
+  apiModel.updateRequest( id, changes, (err, results) => {
+    if (err) {
+      console.error("Model error:", err);
+      return res.status(500).json({ status: false, message: "Database update failed" });
+    }
+
+    return res.json({ status: true, message: "Request updated", results });
+  });
+};
+
 module.exports = {
   addCollection,
   getCollections,
   addRequest,
-  getRequestsByCollectionId
+  getRequestsByCollectionId,
+  updateRequest
 };

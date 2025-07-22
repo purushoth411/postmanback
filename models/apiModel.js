@@ -92,7 +92,28 @@ const getRequestsByCollectionId = (collection_id, callback) => {
   });
 };
 
+const updateRequest = ( id, changes, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
 
+    const fields = Object.keys(changes).map(field => `${field} = ?`).join(', ');
+    const values = Object.values(changes);
+    const sql = `UPDATE tbl_api_requests SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+
+    connection.query(sql, [...values, id], (err, results) => {
+      connection.release();
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, results);
+    });
+  });
+};
 
 
 module.exports = {
@@ -101,4 +122,5 @@ module.exports = {
   addRequest,
   getRequestsByCollectionId,
   getRequestById,
+  updateRequest
 };
