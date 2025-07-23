@@ -154,3 +154,73 @@
 2025-07-22 22:19:26 | INFO | Server running on port 5000
 2025-07-22 22:19:33 | INFO | Server running on port 5000
 2025-07-22 22:20:01 | INFO | Server running on port 5000
+2025-07-23 20:46:17 | INFO | Server running on port 5000
+2025-07-23 20:46:47 | INFO | Server running on port 5000
+2025-07-23 21:48:32 | INFO | Server running on port 5000
+2025-07-23 21:54:47 | INFO | Server running on port 5000
+2025-07-23 22:01:58 | INFO | Server running on port 5000
+2025-07-23 22:01:59 | INFO | Server running on port 5000
+2025-07-23 22:02:06 | INFO | Server running on port 5000
+2025-07-23 22:04:05 | INFO | Server running on port 5000
+2025-07-23 22:04:07 | INFO | Server running on port 5000
+2025-07-23 22:04:13 | INFO | Server running on port 5000
+2025-07-23 22:04:22 | INFO | Server running on port 5000
+2025-07-23 22:04:29 | INFO | Server running on port 5000
+2025-07-23 22:04:37 | INFO | Server running on port 5000
+2025-07-23 22:04:40 | INFO | Server running on port 5000
+2025-07-23 22:04:44 | INFO | Server running on port 5000
+2025-07-23 22:04:48 | INFO | Server running on port 5000
+2025-07-23 22:04:54 | INFO | Server running on port 5000
+2025-07-23 22:05:43 | INFO | Server running on port 5000
+2025-07-23 22:05:49 | INFO | Server running on port 5000
+2025-07-23 22:05:53 | INFO | Server running on port 5000
+2025-07-23 22:05:57 | INFO | Server running on port 5000
+2025-07-23 22:06:11 | INFO | Server running on port 5000
+2025-07-23 22:06:36 | INFO | Server running on port 5000
+2025-07-23 22:06:41 | INFO | Server running on port 5000
+2025-07-23 22:06:44 | INFO | Server running on port 5000
+2025-07-23 22:06:46 | INFO | Server running on port 5000
+2025-07-23 22:06:49 | INFO | Server running on port 5000
+2025-07-23 22:06:54 | INFO | Server running on port 5000
+2025-07-23 22:07:06 | INFO | Server running on port 5000
+2025-07-23 22:07:09 | INFO | Server running on port 5000
+2025-07-23 22:07:30 | INFO | Server running on port 5000
+2025-07-23 22:07:32 | INFO | Server running on port 5000
+2025-07-23 22:07:49 | INFO | Server running on port 5000
+2025-07-23 22:08:39 | INFO | Server running on port 5000
+2025-07-23 22:08:42 | INFO | Server running on port 5000
+2025-07-23 22:08:47 | ERROR | TypeError: callback is not a function
+    at Query.<anonymous> (D:\React\postmanback\models\apiModel.js:24:14)
+    at Query.<anonymous> (D:\React\postmanback\node_modules\mysql\lib\Connection.js:526:10)
+    at Query._callback (D:\React\postmanback\node_modules\mysql\lib\Connection.js:488:16)
+    at Sequence.end (D:\React\postmanback\node_modules\mysql\lib\protocol\sequences\Sequence.js:83:24)
+    at Query._handleFinalResultPacket (D:\React\postmanback\node_modules\mysql\lib\protocol\sequences\Query.js:149:8)
+    at Query.OkPacket (D:\React\postmanback\node_modules\mysql\lib\protocol\sequences\Query.js:74:10)
+    at Protocol._parsePacket (D:\React\postmanback\node_modules\mysql\lib\protocol\Protocol.js:291:23)
+    at Parser._parsePacket (D:\React\postmanback\node_modules\mysql\lib\protocol\Parser.js:433:10)
+    at Parser.write (D:\React\postmanback\node_modules\mysql\lib\protocol\Parser.js:43:10)
+    at Protocol.write (D:\React\postmanback\node_modules\mysql\lib\protocol\Protocol.js:38:16)
+2025-07-23 22:10:50 | INFO | Server running on port 5000
+2025-07-23 22:32:16 | INFO | Server running on port 5000
+2025-07-23 22:32:23 | INFO | Server running on port 5000
+2025-07-23 23:07:09 | INFO | Server running on port 5000
+2025-07-23 23:07:13 | INFO | Server running on port 5000
+2025-07-23 23:07:15 | INFO | Server running on port 5000
+2025-07-23 23:16:41 | INFO | Server running on port 5000
+2025-07-23 23:21:02 | INFO | Server running on port 5000
+2025-07-23 23:21:04 | INFO | Server running on port 5000
+2025-07-23 23:21:12 | INFO | Server running on port 5000
+2025-07-23 23:22:04 | INFO | Server running on port 5000
+2025-07-23 23:22:09 | INFO | Server running on port 5000
+2025-07-23 23:25:05 | INFO | Server running on port 5000
+2025-07-23 23:25:08 | INFO | Server running on port 5000
+2025-07-23 23:25:57 | INFO | Server running on port 5000
+2025-07-23 23:25:58 | INFO | Server running on port 5000
+2025-07-23 23:42:07 | INFO | Server running on port 5000
+2025-07-23 23:43:28 | INFO | Server running on port 5000
+2025-07-23 23:43:31 | INFO | Server running on port 5000
+2025-07-23 23:43:37 | INFO | Server running on port 5000
+2025-07-23 23:44:37 | INFO | Server running on port 5000
+2025-07-23 23:44:40 | INFO | Server running on port 5000
+2025-07-23 23:44:45 | INFO | Server running on port 5000
+2025-07-23 23:44:51 | INFO | Server running on port 5000

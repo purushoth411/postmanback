@@ -28,6 +28,81 @@ const addCollection = (req, res) => {
   }
 };
 
+const addFolder = (req, res) => {
+  try {
+    const { user_id, name, collection_id, parent_folder_id = null } = req.body;
+
+    if (!user_id || !name || !collection_id) {
+      return res.status(400).json({ status: false, message: 'Missing required fields' });
+    }
+
+    apiModel.addFolder(user_id, collection_id, parent_folder_id, name, (err, result) => {
+      if (err) {
+        console.error('Error creating folder:', err);
+        return res.status(500).json({ status: false, message: 'Database error' });
+      }
+
+      return res.status(201).json({
+        status: true,
+        message: 'Folder added successfully',
+        folder: {
+          id: result.insertId,
+          collection_id,
+          parent_folder_id,
+          user_id,
+          name,
+          created_at: new Date(),
+          updated_at: new Date(),
+        }
+      });
+    });
+  } catch (error) {
+    console.error("Error in addFolder:", error);
+    return res.status(500).json({ status: false, message: "Internal server error" });
+  }
+};
+
+
+
+const renameCollection = async (req, res) => {
+  const { collection_id, name } = req.body;
+
+  if (!collection_id || !name) {
+    return res.status(400).json({ error: 'Missing collection_id or name' });
+  }
+
+  try {
+    const result = await apiModel.renameCollection(collection_id, name);
+    return res.status(200).json({ message: 'Collection renamed successfully', result });
+  } catch (err) {
+    console.error('Error renaming collection:', err);
+    return res.status(500).json({ error: 'Failed to rename collection' });
+  }
+};
+
+// Delete Collecti
+const deleteCollection = async (req, res) => {
+  const { collection_id } = req.body;
+
+  if (!collection_id) {
+    return res.status(400).json({ error: 'Missing collection_id' });
+  }
+
+  try {
+    apiModel.deleteCollection(collection_id, (err, result) => {
+  if (err) {
+    console.error('Error deleting collection:', err);
+    return res.status(500).json({ error: 'Failed to delete collection' });
+  }
+  return res.status(200).json({ message: 'Collection deleted successfully', result });
+});
+
+  } catch (err) {
+    console.error('Error deleting collection:', err);
+    return res.status(500).json({ error: 'Failed to delete collection' });
+  }
+};
+
 const getCollections = (req, res) => {
   try{
     const user_id = req.query.user_id;
@@ -50,8 +125,10 @@ const getCollections = (req, res) => {
   }
 };
 
+
+
 const addRequest = (req, res) => {
-  const { collection_id, name, method, url, body } = req.body;
+  const { collection_id,folder_id, name, method, url, body } = req.body;
   const user_id = req.session?.user?.id || req.body.user_id;
 
   if (!user_id || !collection_id || !name || !method) {
@@ -64,7 +141,8 @@ const addRequest = (req, res) => {
     name,
     method,
     url: url || '',
-    body: body || ''
+    body: body || '',
+    folder_id:folder_id || null
   };
 
   apiModel.addRequest(requestData, (err, insertId) => {
@@ -95,18 +173,39 @@ const getRequestsByCollectionId = (req, res) => {
     return res.status(400).json({ status: false, message: "Missing collection_id" });
   }
 
-  apiModel.getRequestsByCollectionId(collection_id, (err, results) => {
+  apiModel.getRequestsByCollectionId(collection_id, (err, data) => {
     if (err) {
-      console.error("Error fetching requests:", err);
       return res.status(500).json({ status: false, message: "Database error" });
     }
 
     return res.json({
       status: true,
-      requests: results
+      folders: data.folders,
+      requests: data.requests
     });
   });
 };
+
+const getRequestsByFolderId = (req, res) => {
+  const folder_id = req.query.folder_id;
+
+  if (!folder_id) {
+    return res.status(400).json({ status: false, message: "Missing folder_id" });
+  }
+
+  apiModel.getRequestsByFolderId(folder_id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json({
+      status: true,
+      folders: data.folders,
+      requests: data.requests
+    });
+  });
+};
+
 
 const updateRequest = (req, res) => {
   const id = req.params.id;
@@ -132,8 +231,12 @@ const updateRequest = (req, res) => {
 
 module.exports = {
   addCollection,
+  addFolder,
+  renameCollection,
+  deleteCollection,
   getCollections,
   addRequest,
   getRequestsByCollectionId,
-  updateRequest
+  getRequestsByFolderId,
+  updateRequest,
 };
