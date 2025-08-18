@@ -21,6 +21,50 @@ const loginUser = (req, res) => {
     });
 };
 
+const registerUser = (req, res) => {
+  try {
+    const { name, email, userpass } = req.body;
+
+    if (!name || !email || !userpass) {
+      return res.json({ status: false, message: "All fields are required" });
+    }
+
+    userModel.checkEmailExists(email, (err, exists) => {
+      if (err) return res.json({ status: false, message: "Database error" });
+
+      if (exists) {
+        return res.json({ status: false, message: "Email already registered" });
+      }
+
+      // Step 1: Insert user
+      userModel.insertUser(name, email, userpass, (err, userId) => {
+        if (err) return res.json({ status: false, message: "Error inserting user" });
+
+        // Step 2: Create default workspace + assign owner role
+        userModel.createWorkspace(userId, (err, workspaceId) => {
+          if (err) return res.json({ status: false, message: "Error creating workspace" });
+
+          return res.json({
+            status: true,
+            message: "User registered successfully",
+            user: {
+              id: userId,
+              name,
+              email,
+              workspace_id: workspaceId,
+              role: "OWNER",
+            },
+          });
+        });
+      });
+    });
+  } catch (error) {
+    console.error("Unexpected Error:", error);
+    return res.json({ status: false, message: "Something went wrong" });
+  }
+};
+
+
 
 
 
@@ -49,74 +93,10 @@ const getUserCount = (req, res) => {
 };
 
 
-const getAllUsersIncludingAdmin = (req, res) =>{
-    userModel.getAllUsersIncludingAdmin((err, users) => {
-        if(err){
-           return res.status(500).json({status : false, message : "an error occured" + err})
-        }
 
-        return res.json({status: true, message : "Success" , data: users})
-    })
-}
-
-// Add user
-const addUser = (req, res) => {
-    const { name, email, password, user_type } = req.body;
-    if (!name || !email || !password || !user_type) {
-        return res.status(400).json({ status: false, message: 'All fields are required' });
-    }
-
-    userModel.getUserByEmail(email, (err, existingUser) => {
-        if (err) {
-            return res.status(500).json({ status: false, message: 'Error checking email: ' + err });
-        }
-
-        if (existingUser) {
-            return res.status(409).json({ status: false, message: 'Email already exists' });
-        }
-
-        // Email not found, proceed to add user
-        userModel.addUser(req.body, (err, result) => {
-            if (err) {
-                return res.status(500).json({ status: false, message: 'Failed to add user: ' + err });
-            }
-            return res.json({ status: true, message: 'User added successfully', insertId: result.insertId });
-        });
-    });
-};
-
-// Update user
-const updateUser = (req, res) => {
-    const { id } = req.params;
-    const { name, email, password, user_type } = req.body;
-    if (!name || !email || !password || !user_type) {
-        return res.status(400).json({ status: false, message: 'All fields are required' });
-    }
-
-    userModel.updateUser(id, req.body, (err, result) => {
-        if (err) {
-            return res.status(500).json({ status: false, message: 'Failed to update user: ' + err });
-        }
-        return res.json({ status: true, message: 'User updated successfully' });
-    });
-};
-
-// Delete user
-const deleteUser = (req, res) => {
-    const { id } = req.params;
-    userModel.deleteUser(id, (err, result) => {
-        if (err) {
-            return res.status(500).json({ status: false, message: 'Failed to delete user: ' + err });
-        }
-        return res.json({ status: true, message: 'User deleted successfully' });
-    });
-};
 module.exports = {
     loginUser,
     getAllUsers,
     getUserCount,
-    getAllUsersIncludingAdmin,
-    addUser,
-    updateUser,
-    deleteUser
+    registerUser,
 };

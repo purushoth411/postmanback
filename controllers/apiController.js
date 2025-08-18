@@ -3,24 +3,31 @@ const apiModel = require('../models/apiModel');
 
 const addCollection = (req, res) => {
   try{
-    const { user_id, name } = req.body;
+    const { user_id,wks_id, name } = req.body;
 
-  if (!user_id || !name) {
+  if (!user_id || !name || !wks_id) {
     return res.status(400).json({ status: false, message: 'user_id and name are required' });
   }
 
-  apiModel.addCollection(user_id, name, (err, result) => {
+  apiModel.addCollection(user_id,wks_id, name, (err, result) => {
     if (err) {
       console.error('Error creating collection:', err);
       return res.status(500).json({ status: false, message: 'Database error' });
     }
+    apiModel.getCollectionById(result.insertId,(err,collection)=>{
+       if (err) {
+      console.error('Error in getting  collection:', err);
+      return res.status(500).json({ status: false, message: 'Database error' });
+    }
+   
 
-    return res.status(201).json({
-      status: true,
-      message: 'Collection added successfully',
-      collection_id: result.insertId,
-      name
-    });
+        return res.status(201).json({
+          status: true,
+          message: 'Collection added successfully',
+          collection: collection,
+          name
+        });
+     })
   });
   }catch (error) {
     console.error("Error in getCollections:", error);
@@ -105,13 +112,13 @@ const deleteCollection = async (req, res) => {
 
 const getCollections = (req, res) => {
   try{
-    const user_id = req.query.user_id;
+    const wks_id = req.query.wks_id;
 
-  if (!user_id) {
-    return res.status(400).json({ status: false, message: "Missing user_id" });
+  if (!wks_id) {
+    return res.status(400).json({ status: false, message: "Missing Workspace" });
   }
 
-  apiModel.getCollectionsByUser(user_id, (err, collections) => {
+  apiModel.getCollectionsByWorkspace(wks_id, (err, collections) => {
     if (err) {
       console.error("Error fetching collections:", err);
       return res.status(500).json({ status: false, message: "Server error" });
@@ -229,6 +236,73 @@ const updateRequest = (req, res) => {
   });
 };
 
+const getWorkspaces = (req, res) => {
+  const user_id = req.query.user_id;
+
+  if (!user_id) {
+    return res.status(400).json({ status: false, message: "Missing user id" });
+  }
+
+  apiModel.getWorkspaces(user_id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json({
+      status: true,
+      workspaces: data,
+    });
+  });
+};
+
+const createWorkspace = (req, res) => {
+  const { name, user_id, members } = req.body;
+
+  if (!name || !user_id) {
+    return res.json({ status: false, message: "Workspace name and user_id required" });
+  }
+
+  // Step 1: create workspace
+  apiModel.createWorkspace(name, user_id, (err, workspaceId) => {
+    if (err) {
+      console.error("DB Error:", err);
+      return res.json({ status: false, message: "Error creating workspace" });
+    }
+
+    // Step 2: add creator as OWNER
+    apiModel.addMember(workspaceId, user_id, "OWNER", (err) => {
+      if (err) {
+        console.error("DB Error:", err);
+        return res.json({ status: false, message: "Error adding owner" });
+      }
+
+      // Step 3: loop through members
+      if (members && members.length > 0) {
+        members.forEach((m) => {
+          if (!m.email || !m.role) return; // skip empty row
+
+          apiModel.findUserByEmail(m.email, (err, user) => {
+            if (err) return console.error("DB Error:", err);
+            if (!user) return console.log(`User not found: ${m.email}`);
+
+            apiModel.addMember(workspaceId, user.id, m.role, (err) => {
+              if (err) console.error("DB Error:", err);
+            });
+            return res.json({
+        status: true,
+        message: "Workspace created successfully",
+        workspace: { id: workspaceId, name },
+      });
+          });
+        });
+      }
+
+      
+    });
+  });
+};
+
+
 module.exports = {
   addCollection,
   addFolder,
@@ -239,4 +313,6 @@ module.exports = {
   getRequestsByCollectionId,
   getRequestsByFolderId,
   updateRequest,
+  getWorkspaces,
+  createWorkspace,
 };

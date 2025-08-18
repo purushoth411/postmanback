@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const apiController = require('../controllers/apiController');
 
-
+router.get('/getWorkspaces',apiController.getWorkspaces);
 router.get('/getCollections', apiController.getCollections);
+router.post("/createWorkspace", apiController.createWorkspace);
+
 router.post('/addCollection', apiController.addCollection);
 router.post('/addFolder', apiController.addFolder);
 router.put('/renameCollection', apiController.renameCollection);

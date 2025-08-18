@@ -1,12 +1,12 @@
 const { add } = require('winston');
 const db = require('../config/db');
 
-const addCollection = (user_id, name, callback) => {
+const addCollection = (user_id,wks_id, name, callback) => {
   db.getConnection((err, connection) => {
     if (err) return callback(err);
 
-    const sql = 'INSERT INTO tbl_collections (user_id, name) VALUES (?, ?)';
-    connection.query(sql, [user_id, name], (err, result) => {
+    const sql = 'INSERT INTO tbl_collections (user_id,workspace_id, name) VALUES (?, ?,?)';
+    connection.query(sql, [user_id,wks_id, name], (err, result) => {
       connection.release(); // release connection back to pool
       callback(err, result);
     });
@@ -95,13 +95,83 @@ const getCollectionsByUser = (user_id, callback) => {
   });
 };
 
+const getCollectionsByWorkspace = (wks_id, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("DB connection error:", err);
+      return callback(err);
+    }
+
+    const query = `
+      SELECT 
+        c.id, 
+        c.name, 
+        COUNT(r.collection_id) AS request_count
+      FROM 
+        tbl_collections c
+      LEFT JOIN 
+        tbl_api_requests r ON c.id = r.collection_id
+      WHERE 
+        c.workspace_id = ?
+      GROUP BY 
+        c.id, c.name
+    `;
+
+    connection.query(query, [wks_id], (err, results) => {
+      connection.release(); // Always release the connection
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, results);
+    });
+  });
+};
+
+const getCollectionById = (id, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("DB connection error:", err);
+      return callback(err);
+    }
+
+    const query = `
+      SELECT 
+        c.id, 
+        c.name, 
+        COUNT(r.collection_id) AS request_count
+      FROM 
+        tbl_collections c
+      LEFT JOIN 
+        tbl_api_requests r ON c.id = r.collection_id
+      WHERE 
+        c.id = ?
+      GROUP BY 
+        c.id, c.name
+    `;
+
+    connection.query(query, [id], (err, results) => {
+      connection.release(); // Always release the connection
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      // return single object instead of array
+      return callback(null, results[0] || null);
+    });
+  });
+};
+
+
 const addRequest = (data, callback) => {
   db.getConnection((err, connection) => {
     if (err) return callback(err);
 
     const sql = `
       INSERT INTO tbl_api_requests 
-      (collection_id, user_id, name, method, url, body,folder_id)
+      (collection_id, user_id, name, method, url, body_raw,folder_id)
       VALUES (?, ?, ?, ?, ?, ?,?)
     `;
     const values = [
@@ -205,15 +275,22 @@ const getRequestsByFolderId = (folder_id, callback) => {
 };
 
 
-const updateRequest = ( id, changes, callback) => {
+const updateRequest = (id, changes, callback) => {
   db.getConnection((err, connection) => {
     if (err) {
       console.error("Connection error:", err);
       return callback(err);
     }
 
-    const fields = Object.keys(changes).map(field => `${field} = ?`).join(', ');
-    const values = Object.values(changes);
+    // stringify queryParams if it exists
+    const safeChanges = { ...changes };
+    if (safeChanges.queryParams) {
+      safeChanges.queryParams = JSON.stringify(safeChanges.queryParams);
+    }
+
+    const fields = Object.keys(safeChanges).map(field => `${field} = ?`).join(', ');
+    const values = Object.values(safeChanges);
+
     const sql = `UPDATE tbl_api_requests SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
 
     connection.query(sql, [...values, id], (err, results) => {
@@ -222,8 +299,82 @@ const updateRequest = ( id, changes, callback) => {
         console.error("Query error:", err);
         return callback(err);
       }
+      return callback(null, results);
+    });
+  });
+};
+
+
+const getWorkspaces = (userId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      SELECT w.*, wm.role, wm.added_at
+      FROM tbl_workspaces w
+      INNER JOIN tbl_workspace_members wm 
+        ON w.id = wm.workspace_id
+      WHERE wm.user_id = ?
+    `;
+
+    connection.query(sql, [userId], (err, results) => {
+      connection.release(); // ✅ Always release connection
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
 
       return callback(null, results);
+    });
+  });
+};
+
+
+const createWorkspace = (name, userId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "INSERT INTO tbl_workspaces (name, user_id, is_default_wks) VALUES (?, ?, 0)";
+    connection.query(sql, [name, userId], (err, result) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null, result.insertId);
+    });
+  });
+};
+
+// Add member to workspace
+const addMember = (workspaceId, userId, role, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "INSERT INTO tbl_workspace_members (workspace_id, user_id, role) VALUES (?, ?, ?)";
+    connection.query(sql, [workspaceId, userId, role], (err) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null);
+    });
+  });
+};
+
+// Find user by email
+const findUserByEmail = (email, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "SELECT * FROM tbl_users WHERE email = ?";
+    connection.query(sql, [email], (err, results) => {
+      connection.release();
+      if (err) return callback(err);
+
+      if (results.length > 0) return callback(null, results[0]);
+      callback(null, null);
     });
   });
 };
@@ -240,4 +391,10 @@ module.exports = {
   getRequestsByFolderId,
   getRequestById,
   updateRequest,
+  getWorkspaces,
+  getCollectionsByWorkspace,
+  findUserByEmail,
+  createWorkspace,
+  addMember,
+  getCollectionById,
 };
