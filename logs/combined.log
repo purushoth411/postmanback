@@ -419,3 +419,106 @@
 2025-08-18 20:27:04 | INFO | Server running on port 5000
 2025-08-18 20:27:32 | INFO | Server running on port 5000
 2025-08-18 22:01:50 | INFO | Server running on port 5000
+2025-08-18 22:04:15 | INFO | Server running on port 5000
+2025-08-22 21:17:05 | INFO | Server running on port 5000
+2025-08-22 21:17:30 | INFO | Server running on port 5000
+2025-08-23 22:47:24 | INFO | Server running on port 5000
+2025-08-23 22:52:20 | INFO | Server running on port 5000
+2025-08-23 22:52:23 | INFO | Server running on port 5000
+2025-08-23 22:52:26 | INFO | Server running on port 5000
+2025-08-23 22:52:31 | INFO | Server running on port 5000
+2025-08-23 23:01:37 | INFO | Server running on port 5000
+2025-08-24 11:29:59 | INFO | Server running on port 5000
+2025-08-24 11:30:03 | INFO | Server running on port 5000
+2025-08-24 11:30:20 | INFO | Server running on port 5000
+2025-08-24 11:30:22 | INFO | Server running on port 5000
+2025-08-24 11:42:12 | INFO | Server running on port 5000
+2025-08-24 11:44:08 | INFO | Server running on port 5000
+2025-08-24 11:45:12 | INFO | Server running on port 5000
+2025-08-24 11:45:37 | INFO | Server running on port 5000
+2025-08-24 11:47:05 | INFO | Server running on port 5000
+2025-08-24 11:47:40 | INFO | Server running on port 5000
+2025-08-24 11:48:03 | INFO | Server running on port 5000
+2025-08-24 11:48:22 | INFO | Server running on port 5000
+2025-08-24 11:48:23 | INFO | Server running on port 5000
+2025-08-24 11:48:24 | INFO | Server running on port 5000
+2025-08-24 11:49:07 | INFO | Server running on port 5000
+2025-08-24 11:49:09 | INFO | Server running on port 5000
+2025-08-24 12:17:27 | INFO | Server running on port 5000
+2025-08-24 12:17:39 | INFO | Server running on port 5000
+2025-08-24 12:32:36 | INFO | Server running on port 5000
+2025-08-24 15:26:57 | ERROR | TypeError: callback is not a function
+    at Query.<anonymous> (D:\React\postmanback\models\apiModel.js:47:14)
+    at Query.<anonymous> (D:\React\postmanback\node_modules\mysql\lib\Connection.js:526:10)
+    at Query._callback (D:\React\postmanback\node_modules\mysql\lib\Connection.js:488:16)
+    at Sequence.end (D:\React\postmanback\node_modules\mysql\lib\protocol\sequences\Sequence.js:83:24)
+    at Query._handleFinalResultPacket (D:\React\postmanback\node_modules\mysql\lib\protocol\sequences\Query.js:149:8)
+    at Query.OkPacket (D:\React\postmanback\node_modules\mysql\lib\protocol\sequences\Query.js:74:10)
+    at Protocol._parsePacket (D:\React\postmanback\node_modules\mysql\lib\protocol\Protocol.js:291:23)
+    at Parser._parsePacket (D:\React\postmanback\node_modules\mysql\lib\protocol\Parser.js:433:10)
+    at Parser.write (D:\React\postmanback\node_modules\mysql\lib\protocol\Parser.js:43:10)
+    at Protocol.write (D:\React\postmanback\node_modules\mysql\lib\protocol\Protocol.js:38:16)
+2025-08-24 15:41:33 | INFO | Server running on port 5000
+2025-08-24 15:42:44 | INFO | Server running on port 5000
+2025-08-24 15:42:45 | INFO | Server running on port 5000
+2025-08-24 15:43:02 | INFO | Server running on port 5000
+2025-08-24 15:45:03 | INFO | Server running on port 5000
+2025-08-24 15:45:13 | INFO | Server running on port 5000
+2025-08-24 15:45:34 | INFO | Server running on port 5000
+2025-08-24 15:45:38 | INFO | Server running on port 5000
+2025-08-24 15:45:42 | INFO | Server running on port 5000
+2025-08-24 15:46:49 | INFO | Server running on port 5000
+2025-08-24 15:48:44 | INFO | Server running on port 5000
+2025-08-24 15:49:16 | INFO | Server running on port 5000
+2025-08-24 15:49:25 | INFO | Server running on port 5000
+2025-08-24 15:49:31 | INFO | Server running on port 5000
+2025-08-24 15:49:54 | INFO | Server running on port 5000
+2025-08-24 15:49:59 | ERROR | TypeError: callback is not a function
+    at Query.<anonymous> (D:\React\postmanback\models\apiModel.js:75:14)
+    at Query.<anonymous> (D:\React\postmanback\node_modules\mysql\lib\Connection.js:526:10)
+    at Query._callback (D:\React\postmanback\node_modules\mysql\lib\Connection.js:488:16)
+    at Sequence.end (D:\React\postmanback\node_modules\mysql\lib\protocol\sequences\Sequence.js:83:24)
+    at Query._handleFinalResultPacket (D:\React\postmanback\node_modules\mysql\lib\protocol\sequences\Query.js:149:8)
+    at Query.OkPacket (D:\React\postmanback\node_modules\mysql\lib\protocol\sequences\Query.js:74:10)
+    at Protocol._parsePacket (D:\React\postmanback\node_modules\mysql\lib\protocol\Protocol.js:291:23)
+    at Parser._parsePacket (D:\React\postmanback\node_modules\mysql\lib\protocol\Parser.js:433:10)
+    at Parser.write (D:\React\postmanback\node_modules\mysql\lib\protocol\Parser.js:43:10)
+    at Protocol.write (D:\React\postmanback\node_modules\mysql\lib\protocol\Protocol.js:38:16)
+2025-08-24 15:51:30 | INFO | Server running on port 5000
+2025-08-24 15:51:33 | INFO | Server running on port 5000
+2025-08-24 15:51:48 | INFO | Server running on port 5000
+2025-08-24 15:54:20 | INFO | Server running on port 5000
+2025-08-24 15:54:28 | INFO | Server running on port 5000
+2025-08-24 15:54:47 | INFO | Server running on port 5000
+2025-08-24 15:54:49 | INFO | Server running on port 5000
+2025-08-24 15:55:05 | INFO | Server running on port 5000
+2025-08-24 15:55:10 | INFO | Server running on port 5000
+2025-08-24 15:55:20 | INFO | Server running on port 5000
+2025-08-24 15:55:34 | INFO | Server running on port 5000
+2025-08-24 15:55:36 | INFO | Server running on port 5000
+2025-08-24 15:55:42 | INFO | Server running on port 5000
+2025-08-24 15:55:45 | INFO | Server running on port 5000
+2025-08-24 15:56:35 | INFO | Server running on port 5000
+2025-08-24 15:56:38 | INFO | Server running on port 5000
+2025-08-24 15:56:43 | INFO | Server running on port 5000
+2025-08-24 15:56:54 | INFO | Server running on port 5000
+2025-08-24 15:57:04 | INFO | Server running on port 5000
+2025-08-24 16:00:21 | INFO | Server running on port 5000
+2025-08-24 16:02:18 | INFO | Server running on port 5000
+2025-08-24 16:02:49 | INFO | Server running on port 5000
+2025-08-24 16:05:23 | INFO | Server running on port 5000
+2025-08-24 16:26:00 | INFO | Server running on port 5000
+2025-08-24 16:37:59 | INFO | Server running on port 5000
+2025-08-24 16:38:50 | INFO | Server running on port 5000
+2025-08-24 22:00:23 | INFO | Server running on port 5000
+2025-08-24 22:00:29 | INFO | Server running on port 5000
+2025-08-24 22:00:41 | INFO | Server running on port 5000
+2025-08-24 22:00:44 | INFO | Server running on port 5000
+2025-08-24 22:04:12 | INFO | Server running on port 5000
+2025-08-24 22:04:45 | INFO | Server running on port 5000
+2025-08-24 22:04:54 | INFO | Server running on port 5000
+2025-08-24 22:05:03 | INFO | Server running on port 5000
+2025-08-24 22:05:18 | INFO | Server running on port 5000
+2025-08-24 22:05:22 | INFO | Server running on port 5000
+2025-08-24 22:05:26 | INFO | Server running on port 5000
+2025-08-24 22:07:07 | INFO | Server running on port 5000

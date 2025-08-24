@@ -71,21 +71,24 @@ const addFolder = (req, res) => {
 
 
 
-const renameCollection = async (req, res) => {
+const renameCollection = (req, res) => {
   const { collection_id, name } = req.body;
 
   if (!collection_id || !name) {
     return res.status(400).json({ error: 'Missing collection_id or name' });
   }
 
-  try {
-    const result = await apiModel.renameCollection(collection_id, name);
-    return res.status(200).json({ message: 'Collection renamed successfully', result });
-  } catch (err) {
-    console.error('Error renaming collection:', err);
-    return res.status(500).json({ error: 'Failed to rename collection' });
-  }
+  apiModel.renameCollection(collection_id, name, (err, result) => {
+    if (err) {
+      console.error('Error renaming collection:', err);
+      return res.status(500).json({ error: 'Failed to rename collection' });
+    }
+
+    res.status(200).json({ message: 'Collection renamed successfully', result });
+  });
 };
+
+
 
 // Delete Collecti
 const deleteCollection = async (req, res) => {
@@ -107,6 +110,87 @@ const deleteCollection = async (req, res) => {
   } catch (err) {
     console.error('Error deleting collection:', err);
     return res.status(500).json({ error: 'Failed to delete collection' });
+  }
+};
+
+
+const renameFolder = (req, res) => {
+  const { folder_id, name } = req.body;
+
+  if (!folder_id || !name) {
+    return res.status(400).json({ error: 'Missing folder_id or name' });
+  }
+
+  apiModel.renameFolder(folder_id, name, (err, result) => {
+    if (err) {
+      console.error('Error renaming folder:', err);
+      return res.status(500).json({ error: 'Failed to rename folder' });
+    }
+    return res.status(200).json({ message: 'Folder renamed successfully', result });
+  });
+};
+
+
+// Delete Collecti
+const deleteFolder = async (req, res) => {
+  const { folder_id } = req.body;
+
+  if (!folder_id) {
+    return res.status(400).json({ error: 'Missing folder_id' });
+  }
+
+  try {
+    apiModel.deleteFolder(folder_id, (err, result) => {
+  if (err) {
+    console.error('Error deleting folder:', err);
+    return res.status(500).json({ error: 'Failed to delete folder' });
+  }
+  return res.status(200).json({ message: 'Folder deleted successfully', result });
+});
+
+  } catch (err) {
+    console.error('Error deleting folder:', err);
+    return res.status(500).json({ error: 'Failed to delete folder' });
+  }
+};
+
+const renameRequest = (req, res) => {
+  const { request_id, name } = req.body;
+
+  if (!request_id || !name) {
+    return res.status(400).json({ error: 'Missing request_id or name' });
+  }
+
+  apiModel.renameRequest(request_id, name, (err, result) => {
+    if (err) {
+      console.error('Error renaming request:', err);
+      return res.status(500).json({ error: 'Failed to rename request' });
+    }
+    return res.status(200).json({status:true, message: 'Request renamed successfully', result });
+  });
+};
+
+
+// Delete Collecti
+const deleteRequest = async (req, res) => {
+  const { request_id } = req.body;
+
+  if (!request_id) {
+    return res.status(400).json({ error: 'Missing request_id' });
+  }
+
+  try {
+    apiModel.deleteRequest(request_id, (err, result) => {
+  if (err) {
+    console.error('Error deleting folder:', err);
+    return res.status(500).json({ error: 'Failed to delete request' });
+  }
+  return res.status(200).json({status:true, message: 'Request deleted successfully', result });
+});
+
+  } catch (err) {
+    console.error('Error deleting request:', err);
+    return res.status(500).json({ error: 'Failed to delete request' });
   }
 };
 
@@ -302,12 +386,38 @@ const createWorkspace = (req, res) => {
   });
 };
 
+const searchRequests = (req, res) => {
+  const { workspace_id, q } = req.query;
+
+  if (!workspace_id || !q) {
+    return res.status(400).json({
+      status: false,
+      error: "workspace_id and q are required",
+    });
+  }
+
+  apiModel.searchRequests(workspace_id, q, (err, requests) => {
+    if (err) {
+      console.error("DB Error:", err);
+      return res.status(500).json({ status: false, error: "Search failed" });
+    }
+
+    res.json({ status: true, results: requests });
+  });
+};
+
+
+
 
 module.exports = {
   addCollection,
   addFolder,
   renameCollection,
   deleteCollection,
+  renameFolder,
+  deleteFolder,
+  renameRequest,
+  deleteRequest,
   getCollections,
   addRequest,
   getRequestsByCollectionId,
@@ -315,4 +425,5 @@ module.exports = {
   updateRequest,
   getWorkspaces,
   createWorkspace,
+  searchRequests,
 };

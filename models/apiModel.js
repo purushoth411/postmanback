@@ -1,5 +1,6 @@
 const { add } = require('winston');
 const db = require('../config/db');
+const connection = require('../config/db');
 
 const addCollection = (user_id,wks_id, name, callback) => {
   db.getConnection((err, connection) => {
@@ -35,6 +36,7 @@ const addFolder = (user_id, collection_id, parent_folder_id, name, callback) => 
 };
 
 
+
 const renameCollection = (id, name, callback) => {
   db.getConnection((err, connection) => {
     if (err) return callback(err);
@@ -43,16 +45,125 @@ const renameCollection = (id, name, callback) => {
     connection.query(query, [name, id], (err, result) => {
       connection.release(); // Release the connection
       if (err) return callback(err);
-      return callback(null, result);
+      callback(null, result); // Success
     });
   });
 };
+
+
 
 const deleteCollection = (id, callback) => {
   db.getConnection((err, connection) => {
     if (err) return callback(err);
 
     const query = 'DELETE FROM tbl_collections WHERE id = ?';
+    connection.query(query, [id], (err, result) => {
+      connection.release(); // Release the connection
+      if (err) return callback(err);
+      return callback(null, result);
+    });
+  });
+};
+
+
+const renameFolder = (id, name, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const query = 'UPDATE tbl_request_folders SET name = ? WHERE id = ?';
+    connection.query(query, [name, id], (err, result) => {
+      connection.release(); 
+      if (err) return callback(err);
+      return callback(null, result);
+    });
+  });
+};
+
+const deleteFolder = (id, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    // Step 1: Recursively fetch all subfolder IDs
+    const getAllSubFolderIds = (folderId, done) => {
+      const query = 'SELECT id FROM tbl_request_folders WHERE parent_folder_id = ?';
+      connection.query(query, [folderId], (err, rows) => {
+        if (err) return done(err);
+
+        let subFolderIds = rows.map(r => r.id);
+        if (subFolderIds.length === 0) {
+          return done(null, [folderId]);
+        }
+
+        // Recursively fetch deeper subfolders
+        let pending = subFolderIds.length;
+        let allIds = [folderId, ...subFolderIds];
+
+        subFolderIds.forEach(subId => {
+          getAllSubFolderIds(subId, (err, ids) => {
+            if (err) return done(err);
+            allIds.push(...ids);
+            pending--;
+            if (pending === 0) {
+              done(null, allIds);
+            }
+          });
+        });
+      });
+    };
+
+    // Step 2: Delete requests + folders
+    getAllSubFolderIds(id, (err, folderIds) => {
+      if (err) {
+        connection.release();
+        return callback(err);
+      }
+
+      if (folderIds.length === 0) {
+        connection.release();
+        return callback(null, { affectedRows: 0 });
+      }
+
+      // Delete all requests belonging to these folders
+      const deleteRequests = 'DELETE FROM tbl_api_requests WHERE folder_id IN (?)';
+      connection.query(deleteRequests, [folderIds], (err) => {
+        if (err) {
+          connection.release();
+          return callback(err);
+        }
+
+        // Delete the folders themselves
+        const deleteFolders = 'DELETE FROM tbl_request_folders WHERE id IN (?)';
+        connection.query(deleteFolders, [folderIds], (err, result) => {
+          connection.release();
+          if (err) return callback(err);
+          return callback(null, result);
+        });
+      });
+    });
+  });
+};
+
+
+const renameRequest = (id, name, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const query = 'UPDATE tbl_api_requests SET name = ? WHERE id = ?';
+    connection.query(query, [name, id], (err, result) => {
+      connection.release(); // Release the connection
+      if (err) return callback(err);
+      callback(null, result); // Success
+    });
+  });
+};
+
+
+
+const deleteRequest = (id, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const query = 'DELETE FROM tbl_api_requests WHERE id = ?';
     connection.query(query, [id], (err, result) => {
       connection.release(); // Release the connection
       if (err) return callback(err);
@@ -212,7 +323,7 @@ const getRequestsByCollectionId = (collection_id, callback) => {
     }
 
     const folderSql = `SELECT * FROM tbl_request_folders WHERE collection_id = ? AND parent_folder_id is NULL`;
-    const requestSql = `SELECT * FROM tbl_api_requests WHERE collection_id = ?`;
+    const requestSql = `SELECT * FROM tbl_api_requests WHERE collection_id = ? AND folder_id is NULL`;
 
     // Execute both queries in parallel
     connection.query(folderSql, [collection_id], (folderErr, folders) => {
@@ -379,12 +490,85 @@ const findUserByEmail = (email, callback) => {
   });
 };
 
+const searchRequests = (workspaceId, query, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    // First, fetch all folders in this workspace
+    const foldersSql = `SELECT id, collection_id, parent_folder_id, name FROM tbl_request_folders WHERE collection_id IN (SELECT id FROM tbl_collections WHERE workspace_id=?)`;
+    connection.query(foldersSql, [workspaceId], (err, allFolders) => {
+      if (err) {
+        connection.release();
+        return callback(err);
+      }
+
+      // Build folder map for recursive path
+      const folderMap = {};
+      allFolders.forEach(f => {
+        folderMap[f.id] = { id: f.id, parent_folder_id: f.parent_folder_id, name: f.name };
+      });
+
+      // Then fetch requests
+      const sql = `
+        SELECT r.id, r.name, r.method, r.url,
+               r.collection_id,
+               r.folder_id,
+               c.name AS collection_name,
+               f.name AS folder_name,
+               f.parent_folder_id
+        FROM tbl_api_requests r
+        LEFT JOIN tbl_collections c ON r.collection_id = c.id
+        LEFT JOIN tbl_request_folders f ON r.folder_id = f.id
+        WHERE c.workspace_id = ?
+          AND (r.name LIKE ? OR r.url LIKE ?)
+        ORDER BY r.name ASC
+      `;
+      const searchParam = `%${query}%`;
+      connection.query(sql, [workspaceId, searchParam, searchParam], (err, results) => {
+        connection.release();
+        if (err) return callback(err);
+
+        // Recursive function to get full folder path
+        const getFolderPath = (folderId) => {
+          const path = [];
+          let currentId = folderId;
+          while (currentId && folderMap[currentId]) {
+            path.unshift(currentId);
+            currentId = folderMap[currentId].parent_folder_id;
+          }
+          return path;
+        };
+
+        const mapped = results.map(r => ({
+          id: r.id,
+          name: r.name,
+          method: r.method,
+          url: r.url,
+          collection_id: r.collection_id,
+          folder_id: r.folder_id,
+          folder_path: r.folder_id ? getFolderPath(r.folder_id) : [],
+          path: `${r.collection_name || "No Collection"}${r.folder_id ? " / " + getFolderPath(r.folder_id).map(id => folderMap[id]?.name).join(' / ') : ""} / ${r.name}`
+        }));
+
+        callback(null, mapped);
+      });
+    });
+  });
+};
+
+
+
+
 
 module.exports = {
   addCollection,
   addFolder,
   renameCollection,
   deleteCollection,
+  renameFolder,
+  deleteFolder,
+  renameRequest,
+  deleteRequest,
   getCollectionsByUser,
   addRequest,
   getRequestsByCollectionId,
@@ -397,4 +581,5 @@ module.exports = {
   createWorkspace,
   addMember,
   getCollectionById,
+  searchRequests,
 };
