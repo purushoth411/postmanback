@@ -298,27 +298,94 @@ const getRequestsByFolderId = (req, res) => {
 };
 
 
+const getRequestsByRequestId = (req, res) => {
+  const request_id = req.query.request_id;
+
+  const user_id = req.query.user_id;
+
+  if (!request_id || !user_id) {
+    return res.status(400).json({ status: false, message: "Missing request_id or user_id" });
+  }
+
+  apiModel.getRequestsByRequestId(request_id, user_id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    if (!data) {
+      return res.status(404).json({ status: false, message: "Request not found" });
+    }
+
+    return res.json({
+      status: true,
+      request: data
+    });
+  });
+};
+
+
+
+// const updateRequest = (req, res) => {
+//   const id = req.params.id;
+//   const changes = req.body;
+
+//   if (!id) {
+//     return res.status(400).json({ status: false, message: "Missing request id" });
+//   }
+
+//   if (!changes || Object.keys(changes).length === 0) {
+//     return res.status(400).json({ status: false, message: "No update data provided" });
+//   }
+
+//   apiModel.updateRequest( id, changes, (err, results) => {
+//     if (err) {
+//       console.error("Model error:", err);
+//       return res.status(500).json({ status: false, message: "Database update failed" });
+//     }
+
+//     return res.json({ status: true, message: "Request updated", results });
+//   });
+// };
+
+// controller
 const updateRequest = (req, res) => {
-  const id = req.params.id;
+  const request_id = req.query.request_id;
+  const user_id = req.query.user_id;
   const changes = req.body;
 
-  if (!id) {
-    return res.status(400).json({ status: false, message: "Missing request id" });
+  if (!request_id || !user_id) {
+    return res.status(400).json({ status: false, message: "Missing request_id or user_id" });
   }
 
   if (!changes || Object.keys(changes).length === 0) {
     return res.status(400).json({ status: false, message: "No update data provided" });
   }
 
-  apiModel.updateRequest( id, changes, (err, results) => {
+  // Step 1: Get original request name from main table
+  apiModel.getRequestsById(request_id, (err, requestData) => {
     if (err) {
-      console.error("Model error:", err);
-      return res.status(500).json({ status: false, message: "Database update failed" });
+      console.error("Error fetching request:", err);
+      return res.status(500).json({ status: false, message: "Failed to fetch request" });
     }
 
-    return res.json({ status: true, message: "Request updated", results });
+    if (!requestData) {
+      return res.status(404).json({ status: false, message: "Request not found" });
+    }
+
+    const request_name = requestData.name; // original name from main table
+
+    // Step 2: Update draft
+    apiModel.updateRequest(request_id, user_id, { ...changes, name: request_name }, (err2, results) => {
+      if (err2) {
+        console.error("Draft update error:", err2);
+        return res.status(500).json({ status: false, message: "Draft update failed" });
+      }
+
+      return res.json({ status: true, message: "Draft updated", results });
+    });
   });
 };
+
 
 const getWorkspaces = (req, res) => {
   const user_id = req.query.user_id;
@@ -406,6 +473,264 @@ const searchRequests = (req, res) => {
   });
 };
 
+const saveRequest = (req, res) => {
+  const { request_id, user_id, request_data } = req.body;
+
+  if (!request_id || !user_id || !request_data) {
+    return res.status(400).json({ status: false, message: "Missing required fields" });
+  }
+
+  apiModel.saveRequest(request_id, user_id, request_data, (err, result) => {
+    if (err) {
+      console.error("Save error:", err);
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json({
+      status: true,
+      message: "Request saved for all users",
+      data: result
+    });
+  });
+};
+
+// Get all environments for a workspace
+const getEnvironments = (req, res) => {
+  const { wks_id, user_id } = req.query;
+
+  if (!wks_id || !user_id) {
+    return res.status(400).json({ status: false, message: "Missing workspace_id or user_id" });
+  }
+
+  apiModel.getEnvironments(wks_id, user_id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Get active environment for user in workspace
+const getActiveEnvironment = (req, res) => {
+  const { user_id, workspace_id } = req.query;
+
+  if (!user_id || !workspace_id) {
+    return res.status(400).json({ status: false, message: "Missing user_id or workspace_id" });
+  }
+
+  apiModel.getActiveEnvironment(user_id, workspace_id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Add new environment
+const addEnvironment = (req, res) => {
+  const { user_id, workspace_id, name } = req.body;
+
+  if (!user_id || !workspace_id || !name) {
+    return res.status(400).json({ status: false, message: "Missing required fields" });
+  }
+
+  apiModel.addEnvironment(user_id, workspace_id, name, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Set active environment
+const setActiveEnvironment = (req, res) => {
+  const { user_id, workspace_id, environment_id } = req.body;
+
+  if (!user_id || !workspace_id) {
+    return res.status(400).json({ status: false, message: "Missing user_id or workspace_id" });
+  }
+
+  apiModel.setActiveEnvironment(user_id, workspace_id, environment_id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Update environment name
+const updateEnvironment = (req, res) => {
+  const { environment_id, name } = req.body;
+
+  if (!environment_id || !name) {
+    return res.status(400).json({ status: false, message: "Missing environment_id or name" });
+  }
+
+  apiModel.updateEnvironment(environment_id, name, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Delete environment
+const deleteEnvironment = (req, res) => {
+  const { environment_id } = req.body;
+
+  if (!environment_id) {
+    return res.status(400).json({ status: false, message: "Missing environment_id" });
+  }
+
+  apiModel.deleteEnvironment(environment_id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Get environment variables
+const getEnvironmentVariables = (req, res) => {
+  const { environment_id } = req.query;
+
+  if (!environment_id) {
+    return res.status(400).json({ status: false, message: "Missing environment_id" });
+  }
+
+  apiModel.getEnvironmentVariables(environment_id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Add environment variable
+const addEnvironmentVariable = (req, res) => {
+  const { environment_id, key, value, type } = req.body;
+
+  if (!environment_id || !key) {
+    return res.status(400).json({ status: false, message: "Missing environment_id or key" });
+  }
+
+  apiModel.addEnvironmentVariable(environment_id, key, value, type, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Update environment variable
+const updateEnvironmentVariable = (req, res) => {
+  const { id, key, value, type } = req.body;
+
+  if (!id || !key) {
+    return res.status(400).json({ status: false, message: "Missing id or key" });
+  }
+
+  apiModel.updateEnvironmentVariable(id, key, value, type, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Delete environment variable
+const deleteEnvironmentVariable = (req, res) => {
+  const { id } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ status: false, message: "Missing id" });
+  }
+
+  apiModel.deleteEnvironmentVariable(id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Get global variables
+const getGlobalVariables = (req, res) => {
+  const { workspace_id } = req.query;
+
+  if (!workspace_id) {
+    return res.status(400).json({ status: false, message: "Missing workspace_id" });
+  }
+
+  apiModel.getGlobalVariables(workspace_id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Add global variable
+const addGlobalVariable = (req, res) => {
+  const { workspace_id, key, value, type } = req.body;
+
+  if (!workspace_id || !key) {
+    return res.status(400).json({ status: false, message: "Missing workspace_id or key" });
+  }
+
+  apiModel.addGlobalVariable(workspace_id, key, value, type, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Update global variable
+const updateGlobalVariable = (req, res) => {
+  const { id, key, value, type } = req.body;
+
+  if (!id || !key) {
+    return res.status(400).json({ status: false, message: "Missing id or key" });
+  }
+
+  apiModel.updateGlobalVariable(id, key, value, type, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
+
+// Delete global variable
+const deleteGlobalVariable = (req, res) => {
+  const { id } = req.body;
+
+  if (!id) {
+    return res.status(400).json({ status: false, message: "Missing id" });
+  }
+
+  apiModel.deleteGlobalVariable(id, (err, data) => {
+    if (err) {
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json(data);
+  });
+};
 
 
 
@@ -422,8 +747,24 @@ module.exports = {
   addRequest,
   getRequestsByCollectionId,
   getRequestsByFolderId,
+  getRequestsByRequestId,
   updateRequest,
   getWorkspaces,
   createWorkspace,
   searchRequests,
+  saveRequest,
+  getEnvironments,
+  getActiveEnvironment,
+  addEnvironment,
+  setActiveEnvironment,
+  updateEnvironment,
+  deleteEnvironment,
+  getEnvironmentVariables,
+  addEnvironmentVariable,
+  updateEnvironmentVariable,
+  deleteEnvironmentVariable,
+  getGlobalVariables,
+  addGlobalVariable,
+  updateGlobalVariable,
+  deleteGlobalVariable,
 };

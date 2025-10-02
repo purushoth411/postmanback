@@ -148,14 +148,49 @@ const renameRequest = (id, name, callback) => {
   db.getConnection((err, connection) => {
     if (err) return callback(err);
 
-    const query = 'UPDATE tbl_api_requests SET name = ? WHERE id = ?';
-    connection.query(query, [name, id], (err, result) => {
-      connection.release(); // Release the connection
-      if (err) return callback(err);
-      callback(null, result); // Success
+    // Update both tables: requests and drafts
+    const query1 = 'UPDATE tbl_api_requests SET name = ? WHERE id = ?';
+    const query2 = 'UPDATE tbl_api_request_drafts SET name = ? WHERE request_id = ?';
+
+    connection.beginTransaction(err => {
+      if (err) {
+        connection.release();
+        return callback(err);
+      }
+
+      connection.query(query1, [name, id], (err) => {
+        if (err) {
+          return connection.rollback(() => {
+            connection.release();
+            callback(err);
+          });
+        }
+
+        connection.query(query2, [name, id], (err, result2) => {
+          if (err) {
+            return connection.rollback(() => {
+              connection.release();
+              callback(err);
+            });
+          }
+
+          connection.commit(err => {
+            if (err) {
+              return connection.rollback(() => {
+                connection.release();
+                callback(err);
+              });
+            }
+
+            connection.release();
+            callback(null, { message: "Renamed in both tables", affectedDrafts: result2.affectedRows });
+          });
+        });
+      });
     });
   });
 };
+
 
 
 
@@ -163,14 +198,25 @@ const deleteRequest = (id, callback) => {
   db.getConnection((err, connection) => {
     if (err) return callback(err);
 
-    const query = 'DELETE FROM tbl_api_requests WHERE id = ?';
-    connection.query(query, [id], (err, result) => {
-      connection.release(); // Release the connection
-      if (err) return callback(err);
-      return callback(null, result);
+    // Start with deleting from drafts first (using request_id)
+    const draftQuery = 'DELETE FROM tbl_api_drafts WHERE request_id = ?';
+    connection.query(draftQuery, [id], (err) => {
+      if (err) {
+        connection.release();
+        return callback(err);
+      }
+
+      // Then delete from requests (using id)
+      const requestQuery = 'DELETE FROM tbl_api_requests WHERE id = ?';
+      connection.query(requestQuery, [id], (err, result) => {
+        connection.release();
+        if (err) return callback(err);
+        return callback(null, result); // success
+      });
     });
   });
 };
+
 
 const getCollectionsByUser = (user_id, callback) => {
   db.getConnection((err, connection) => {
@@ -386,32 +432,154 @@ const getRequestsByFolderId = (folder_id, callback) => {
 };
 
 
-const updateRequest = (id, changes, callback) => {
+const getRequestsByRequestId = (request_id, user_id, callback) => {
   db.getConnection((err, connection) => {
     if (err) {
       console.error("Connection error:", err);
-      return callback(err);
+      return callback(err, null);
     }
 
-    // stringify queryParams if it exists
+    // 1. Check for draft
+      const draftSql = `
+      SELECT *, request_id AS id, 1 AS isDraft 
+      FROM tbl_api_requests_draft 
+      WHERE request_id=? AND user_id=? 
+      LIMIT 1
+    `;
+    connection.query(draftSql, [request_id, user_id], (draftErr, draftRows) => {
+      if (draftErr) {
+        connection.release();
+        console.error("Draft query error:", draftErr);
+        return callback(draftErr, null);
+      }
+
+      if (draftRows.length > 0) {
+        connection.release();
+        return callback(null, draftRows[0]); // return draft immediately
+      }
+
+      // 2. Otherwise return saved request
+      const requestSql = "SELECT *, 0 as isDraft FROM tbl_api_requests WHERE id=? LIMIT 1";
+      connection.query(requestSql, [request_id], (reqErr, reqRows) => {
+        connection.release();
+
+        if (reqErr) {
+          console.error("Request query error:", reqErr);
+          return callback(reqErr, null);
+        }
+
+        if (reqRows.length > 0) {
+          return callback(null, reqRows[0]);
+        } else {
+          return callback(null, null); // not found
+        }
+      });
+    });
+  });
+};
+
+const getRequestsById = (request_id,callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err, null);
+    }
+
+   
+
+      
+      const requestSql = "SELECT * FROM tbl_api_requests WHERE id=? LIMIT 1";
+      connection.query(requestSql, [request_id], (reqErr, reqRows) => {
+        connection.release();
+
+        if (reqErr) {
+          console.error("Request query error:", reqErr);
+          return callback(reqErr, null);
+        }
+
+        if (reqRows.length > 0) {
+          return callback(null, reqRows[0]);
+        } else {
+          return callback(null, null); // not found
+        }
+      });
+    });
+
+};
+
+
+// const updateRequest = (id, changes, callback) => {
+//   db.getConnection((err, connection) => {
+//     if (err) {
+//       console.error("Connection error:", err);
+//       return callback(err);
+//     }
+
+//     // stringify queryParams if it exists
+//     const safeChanges = { ...changes };
+//     if (safeChanges.queryParams) {
+//       safeChanges.queryParams = JSON.stringify(safeChanges.queryParams);
+//     }
+
+//     const fields = Object.keys(safeChanges).map(field => `${field} = ?`).join(', ');
+//     const values = Object.values(safeChanges);
+
+//     const sql = `UPDATE tbl_api_requests SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
+
+//     connection.query(sql, [...values, id], (err, results) => {
+//       connection.release();
+//       if (err) {
+//         console.error("Query error:", err);
+//         return callback(err);
+//       }
+//       return callback(null, results);
+//     });
+//   });
+// };
+
+// model
+const updateRequest = (request_id, user_id, changes, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    // convert queryParams safely
     const safeChanges = { ...changes };
-    if (safeChanges.queryParams) {
+    if (safeChanges.queryParams && typeof safeChanges.queryParams !== "string") {
       safeChanges.queryParams = JSON.stringify(safeChanges.queryParams);
     }
 
-    const fields = Object.keys(safeChanges).map(field => `${field} = ?`).join(', ');
-    const values = Object.values(safeChanges);
+    const sql = `
+      INSERT INTO tbl_api_requests_draft
+        (request_id, user_id, name, method, url, body_raw, body_formdata, queryParams, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      ON DUPLICATE KEY UPDATE
+        name = VALUES(name),
+        method = VALUES(method),
+        url = VALUES(url),
+        body_raw = VALUES(body_raw),
+        body_formdata = VALUES(body_formdata),
+        queryParams = VALUES(queryParams),
+        updated_at = NOW()
+    `;
 
-    const sql = `UPDATE tbl_api_requests SET ${fields}, updated_at = CURRENT_TIMESTAMP WHERE id = ?`;
-
-    connection.query(sql, [...values, id], (err, results) => {
-      connection.release();
-      if (err) {
-        console.error("Query error:", err);
-        return callback(err);
+    connection.query(
+      sql,
+      [
+        request_id,
+        user_id,
+        safeChanges.name || request_name || "Untitled Request",
+        safeChanges.method || null,
+        safeChanges.url || null,
+        safeChanges.body_raw || null,
+        safeChanges.body_formdata || null,
+        safeChanges.queryParams || null,
+      ],
+      (err2, results) => {
+        connection.release();
+        if (err2) return callback(err2);
+        callback(null, results);
       }
-      return callback(null, results);
-    });
+    );
   });
 };
 
@@ -557,6 +725,429 @@ const searchRequests = (workspaceId, query, callback) => {
 };
 
 
+ const saveRequest= (request_id, user_id, request_data, callback) => {
+    db.getConnection((err, connection) => {
+      if (err) return callback(err);
+
+      const sqlUpdate = `
+        UPDATE tbl_api_requests 
+        SET name=?, method=?, url=?, body_raw=?, body_formdata=?, queryParams=?, updated_at=NOW()
+        WHERE id=?`;
+
+      const values = [
+        request_data.name || "Untitled Request",
+        request_data.method || "GET",
+        request_data.url || "",
+        request_data.body_raw || "",
+        request_data.body_formdata || "",
+        JSON.stringify(request_data.queryParams || []),
+        request_id
+      ];
+
+      connection.query(sqlUpdate, values, (error, result) => {
+        if (error) {
+          connection.release();
+          return callback(error);
+        }
+
+        // delete draft only for this user
+        const sqlDeleteDraft = `
+          DELETE FROM tbl_api_requests_draft 
+          WHERE request_id=? `;
+
+        connection.query(sqlDeleteDraft, [request_id], (draftErr) => {
+          connection.release(); 
+          if (draftErr) return callback(draftErr);
+          callback(null, result);
+        });
+      });
+    });
+  }
+
+
+  const getEnvironments = (workspaceId, userId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      SELECT * FROM tbl_environments
+      WHERE workspace_id = ?
+      ORDER BY created_at DESC
+    `;
+
+    connection.query(sql, [workspaceId], (err, results) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, results);
+    });
+  });
+};
+
+// Get active environment for user in workspace
+const getActiveEnvironment = (userId, workspaceId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      SELECT environment_id 
+      FROM tbl_active_environments
+      WHERE user_id = ? AND workspace_id = ?
+    `;
+
+    connection.query(sql, [userId, workspaceId], (err, results) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, {
+        environment_id: results.length > 0 ? results[0].environment_id : null
+      });
+    });
+  });
+};
+
+// Add new environment
+const addEnvironment = (userId, workspaceId, name, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      INSERT INTO tbl_environments (workspace_id, user_id, name)
+      VALUES (?, ?, ?)
+    `;
+
+    connection.query(sql, [workspaceId, userId, name], (err, result) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, {
+        id: result.insertId,
+        workspace_id: workspaceId,
+        user_id: userId,
+        name: name,
+        created_at: new Date()
+      });
+    });
+  });
+};
+
+// Set active environment
+const setActiveEnvironment = (userId, workspaceId, environmentId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      INSERT INTO tbl_active_environments (user_id, workspace_id, environment_id)
+      VALUES (?, ?, ?)
+      ON DUPLICATE KEY UPDATE 
+        environment_id = VALUES(environment_id),
+        set_at = CURRENT_TIMESTAMP
+    `;
+
+    connection.query(sql, [userId, workspaceId, environmentId], (err, result) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, { status: true, message: "Active environment set" });
+    });
+  });
+};
+
+// Update environment name
+const updateEnvironment = (environmentId, name, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      UPDATE tbl_environments
+      SET name = ?
+      WHERE id = ?
+    `;
+
+    connection.query(sql, [name, environmentId], (err, result) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, { status: true, message: "Environment updated" });
+    });
+  });
+};
+
+// Delete environment
+const deleteEnvironment = (environmentId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `DELETE FROM tbl_environments WHERE id = ?`;
+
+    connection.query(sql, [environmentId], (err, result) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, { status: true, message: "Environment deleted" });
+    });
+  });
+};
+
+// Get environment variables
+const getEnvironmentVariables = (environmentId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      SELECT * FROM tbl_environment_variables
+      WHERE environment_id = ?
+      ORDER BY \`key\`
+    `;
+
+    connection.query(sql, [environmentId], (err, results) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, results);
+    });
+  });
+};
+
+// Add environment variable
+const addEnvironmentVariable = (environmentId, key, value, type, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      INSERT INTO tbl_environment_variables (environment_id, \`key\`, value, type)
+      VALUES (?, ?, ?, ?)
+    `;
+
+    connection.query(sql, [environmentId, key, value || '', type || 'default'], (err, result) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, {
+        id: result.insertId,
+        environment_id: environmentId,
+        key: key,
+        value: value || '',
+        type: type || 'default'
+      });
+    });
+  });
+};
+
+// Update environment variable
+const updateEnvironmentVariable = (id, key, value, type, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      UPDATE tbl_environment_variables
+      SET \`key\` = ?, value = ?, type = ?
+      WHERE id = ?
+    `;
+
+    connection.query(sql, [key, value || '', type || 'default', id], (err, result) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, { status: true, message: "Variable updated" });
+    });
+  });
+};
+
+// Delete environment variable
+const deleteEnvironmentVariable = (id, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `DELETE FROM tbl_environment_variables WHERE id = ?`;
+
+    connection.query(sql, [id], (err, result) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, { status: true, message: "Variable deleted" });
+    });
+  });
+};
+
+// Get global variables
+const getGlobalVariables = (workspaceId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      SELECT * FROM tbl_global_variables
+      WHERE workspace_id = ?
+      ORDER BY \`key\`
+    `;
+
+    connection.query(sql, [workspaceId], (err, results) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, results);
+    });
+  });
+};
+
+// Add global variable
+const addGlobalVariable = (workspaceId, key, value, type, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      INSERT INTO tbl_global_variables (workspace_id, \`key\`, value, type)
+      VALUES (?, ?, ?, ?)
+    `;
+
+    connection.query(sql, [workspaceId, key, value || '', type || 'default'], (err, result) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, {
+        id: result.insertId,
+        workspace_id: workspaceId,
+        key: key,
+        value: value || '',
+        type: type || 'default'
+      });
+    });
+  });
+};
+
+// Update global variable
+const updateGlobalVariable = (id, key, value, type, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `
+      UPDATE tbl_global_variables
+      SET \`key\` = ?, value = ?, type = ?
+      WHERE id = ?
+    `;
+
+    connection.query(sql, [key, value || '', type || 'default', id], (err, result) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, { status: true, message: "Global variable updated" });
+    });
+  });
+};
+
+// Delete global variable
+const deleteGlobalVariable = (id, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) {
+      console.error("Connection error:", err);
+      return callback(err);
+    }
+
+    const sql = `DELETE FROM tbl_global_variables WHERE id = ?`;
+
+    connection.query(sql, [id], (err, result) => {
+      connection.release();
+
+      if (err) {
+        console.error("Query error:", err);
+        return callback(err);
+      }
+
+      return callback(null, { status: true, message: "Global variable deleted" });
+    });
+  });
+};
 
 
 
@@ -573,6 +1164,7 @@ module.exports = {
   addRequest,
   getRequestsByCollectionId,
   getRequestsByFolderId,
+  getRequestsByRequestId,
   getRequestById,
   updateRequest,
   getWorkspaces,
@@ -582,4 +1174,20 @@ module.exports = {
   addMember,
   getCollectionById,
   searchRequests,
+  saveRequest,
+  getRequestsById,
+  getEnvironments,
+  getActiveEnvironment,
+  addEnvironment,
+  setActiveEnvironment,
+  updateEnvironment,
+  deleteEnvironment,
+  getEnvironmentVariables,
+  addEnvironmentVariable,
+  updateEnvironmentVariable,
+  deleteEnvironmentVariable,
+  getGlobalVariables,
+  addGlobalVariable,
+  updateGlobalVariable,
+  deleteGlobalVariable,
 };

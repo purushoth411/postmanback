@@ -17,12 +17,35 @@ router.delete('/deleteRequest', apiController.deleteRequest);
 
 router.get('/getRequestsByCollectionId', apiController.getRequestsByCollectionId);
 router.get('/getRequestsByFolderId', apiController.getRequestsByFolderId);
+router.get('/getRequest', apiController.getRequestsByRequestId);
 
 
 router.post('/addRequest', apiController.addRequest);
 
-router.put('/updateRequest/:id', apiController.updateRequest);
+router.put('/updateRequest', apiController.updateRequest);
 router.get('/searchRequests', apiController.searchRequests);
+
+
+router.post("/saveRequest", apiController.saveRequest);
+
+router.get('/getEnvironments', apiController.getEnvironments);
+router.get('/getActiveEnvironment', apiController.getActiveEnvironment);
+router.post('/addEnvironment', apiController.addEnvironment);
+router.post('/setActiveEnvironment', apiController.setActiveEnvironment);
+router.put('/updateEnvironment', apiController.updateEnvironment);
+router.delete('/deleteEnvironment', apiController.deleteEnvironment);
+
+// Environment Variables
+router.get('/getEnvironmentVariables', apiController.getEnvironmentVariables);
+router.post('/addEnvironmentVariable', apiController.addEnvironmentVariable);
+router.put('/updateEnvironmentVariable', apiController.updateEnvironmentVariable);
+router.delete('/deleteEnvironmentVariable', apiController.deleteEnvironmentVariable);
+
+// Global Variables
+router.get('/getGlobalVariables', apiController.getGlobalVariables);
+router.post('/addGlobalVariable', apiController.addGlobalVariable);
+router.put('/updateGlobalVariable', apiController.updateGlobalVariable);
+router.delete('/deleteGlobalVariable', apiController.deleteGlobalVariable);
 
 
 
