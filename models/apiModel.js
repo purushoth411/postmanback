@@ -150,7 +150,7 @@ const renameRequest = (id, name, callback) => {
 
     // Update both tables: requests and drafts
     const query1 = 'UPDATE tbl_api_requests SET name = ? WHERE id = ?';
-    const query2 = 'UPDATE tbl_api_request_drafts SET name = ? WHERE request_id = ?';
+    const query2 = 'UPDATE tbl_api_requests_draft SET name = ? WHERE request_id = ?';
 
     connection.beginTransaction(err => {
       if (err) {
