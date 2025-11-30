@@ -296,7 +296,8 @@ const getCollectionById = (id, callback) => {
     const query = `
       SELECT 
         c.id, 
-        c.name, 
+        c.name,
+        c.workspace_id,
         COUNT(r.collection_id) AS request_count
       FROM 
         tbl_collections c
@@ -305,7 +306,7 @@ const getCollectionById = (id, callback) => {
       WHERE 
         c.id = ?
       GROUP BY 
-        c.id, c.name
+        c.id, c.name, c.workspace_id
     `;
 
     connection.query(query, [id], (err, results) => {
@@ -643,17 +644,156 @@ const addMember = (workspaceId, userId, role, callback) => {
 };
 
 // Find user by email
+const getWorkspaceById = (workspaceId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "SELECT * FROM tbl_workspaces WHERE id = ?";
+    connection.query(sql, [workspaceId], (err, results) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null, results[0] || null);
+    });
+  });
+};
+
+const getWorkspaceMembers = (workspaceId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = `
+      SELECT 
+        wm.id,
+        wm.workspace_id,
+        wm.user_id,
+        wm.role,
+        wm.added_at,
+        u.name as user_name,
+        u.email as user_email
+      FROM tbl_workspace_members wm
+      JOIN tbl_users u ON wm.user_id = u.id
+      WHERE wm.workspace_id = ?
+      ORDER BY wm.role ASC, u.name ASC
+    `;
+    
+    connection.query(sql, [workspaceId], (err, results) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null, results);
+    });
+  });
+};
+
+const checkUserRole = (workspaceId, userId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "SELECT role FROM tbl_workspace_members WHERE workspace_id = ? AND user_id = ?";
+    connection.query(sql, [workspaceId, userId], (err, results) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null, results[0]?.role || null);
+    });
+  });
+};
+
+const isDefaultWorkspace = (workspaceId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "SELECT is_default_wks FROM tbl_workspaces WHERE id = ?";
+    connection.query(sql, [workspaceId], (err, results) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null, results[0]?.is_default_wks === '1');
+    });
+  });
+};
+
+const updateWorkspaceName = (workspaceId, name, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "UPDATE tbl_workspaces SET name = ?, updated_at = NOW() WHERE id = ?";
+    connection.query(sql, [name, workspaceId], (err) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null);
+    });
+  });
+};
+
+const updateMemberRole = (workspaceId, userId, role, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "UPDATE tbl_workspace_members SET role = ? WHERE workspace_id = ? AND user_id = ?";
+    connection.query(sql, [role, workspaceId, userId], (err) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null);
+    });
+  });
+};
+
+const removeMember = (workspaceId, userId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "DELETE FROM tbl_workspace_members WHERE workspace_id = ? AND user_id = ?";
+    connection.query(sql, [workspaceId, userId], (err) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null);
+    });
+  });
+};
+
+const isMember = (workspaceId, userId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "SELECT id FROM tbl_workspace_members WHERE workspace_id = ? AND user_id = ?";
+    connection.query(sql, [workspaceId, userId], (err, results) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null, results.length > 0);
+    });
+  });
+};
+
+const deleteWorkspace = (workspaceId, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const sql = "DELETE FROM tbl_workspaces WHERE id = ?";
+    connection.query(sql, [workspaceId], (err) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null);
+    });
+  });
+};
+
 const findUserByEmail = (email, callback) => {
   db.getConnection((err, connection) => {
     if (err) return callback(err);
 
-    const sql = "SELECT * FROM tbl_users WHERE email = ?";
+    const sql = "SELECT id, name, email FROM tbl_users WHERE email = ?";
     connection.query(sql, [email], (err, results) => {
       connection.release();
       if (err) return callback(err);
 
-      if (results.length > 0) return callback(null, results[0]);
-      callback(null, null);
+      callback(null, results[0] || null);
     });
   });
 };
@@ -852,7 +992,7 @@ const addEnvironment = (userId, workspaceId, name, callback) => {
   });
 };
 
-// Set active environment
+// Set active environment (can be null to deactivate)
 const setActiveEnvironment = (userId, workspaceId, environmentId, callback) => {
   db.getConnection((err, connection) => {
     if (err) {
@@ -860,24 +1000,44 @@ const setActiveEnvironment = (userId, workspaceId, environmentId, callback) => {
       return callback(err);
     }
 
-    const sql = `
-      INSERT INTO tbl_active_environments (user_id, workspace_id, environment_id)
-      VALUES (?, ?, ?)
-      ON DUPLICATE KEY UPDATE 
-        environment_id = VALUES(environment_id),
-        set_at = CURRENT_TIMESTAMP
-    `;
+    // If environmentId is null, delete the active environment record
+    if (environmentId === null || environmentId === undefined) {
+      const deleteSql = `
+        DELETE FROM tbl_active_environments
+        WHERE user_id = ? AND workspace_id = ?
+      `;
+      
+      connection.query(deleteSql, [userId, workspaceId], (err, result) => {
+        connection.release();
 
-    connection.query(sql, [userId, workspaceId, environmentId], (err, result) => {
-      connection.release();
+        if (err) {
+          console.error("Query error:", err);
+          return callback(err);
+        }
 
-      if (err) {
-        console.error("Query error:", err);
-        return callback(err);
-      }
+        return callback(null, { status: true, message: "Active environment deactivated", environment_id: null });
+      });
+    } else {
+      // Insert or update active environment
+      const sql = `
+        INSERT INTO tbl_active_environments (user_id, workspace_id, environment_id)
+        VALUES (?, ?, ?)
+        ON DUPLICATE KEY UPDATE 
+          environment_id = VALUES(environment_id),
+          set_at = CURRENT_TIMESTAMP
+      `;
 
-      return callback(null, { status: true, message: "Active environment set" });
-    });
+      connection.query(sql, [userId, workspaceId, environmentId], (err, result) => {
+        connection.release();
+
+        if (err) {
+          console.error("Query error:", err);
+          return callback(err);
+        }
+
+        return callback(null, { status: true, message: "Active environment set", environment_id: environmentId });
+      });
+    }
   });
 };
 
@@ -1172,6 +1332,15 @@ module.exports = {
   findUserByEmail,
   createWorkspace,
   addMember,
+  getWorkspaceById,
+  getWorkspaceMembers,
+  checkUserRole,
+  isDefaultWorkspace,
+  updateWorkspaceName,
+  updateMemberRole,
+  removeMember,
+  isMember,
+  deleteWorkspace,
   getCollectionById,
   searchRequests,
   saveRequest,

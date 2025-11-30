@@ -5,6 +5,9 @@ const apiController = require('../controllers/apiController');
 router.get('/getWorkspaces',apiController.getWorkspaces);
 router.get('/getCollections', apiController.getCollections);
 router.post("/createWorkspace", apiController.createWorkspace);
+router.get('/getWorkspaceDetails', apiController.getWorkspaceDetails);
+router.put('/updateWorkspace', apiController.updateWorkspace);
+router.delete('/deleteWorkspace', apiController.deleteWorkspace);
 
 router.post('/addCollection', apiController.addCollection);
 router.post('/addFolder', apiController.addFolder);
