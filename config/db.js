@@ -2,14 +2,14 @@ var mysql = require('mysql');
 
 var connection = mysql.createPool({
     connectionLimit: 100,
-    host: 'localhost',
-    user: 'root',
-    password: '',
-    database: 'postman',
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'postman',
     charset: 'utf8mb4',
     connectTimeout: 20000, 
-    timezone: 'Asia/Kolkata',
-    port:3307,
+    timezone: process.env.DB_TIMEZONE || 'Asia/Kolkata',
+    port: process.env.DB_PORT || 3307,
 });
 
 // Helper to get a connection and execute a query

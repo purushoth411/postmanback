@@ -2,9 +2,16 @@ const { get } = require('http');
 const apiModel = require('../models/apiModel');
 const { getIO } = require('../socket');
 
+// Helper function to get user_id from authenticated session
+// Falls back to req.body.user_id for backward compatibility during migration
+const getUserId = (req) => {
+  return req.user?.id || req.session?.user?.id || req.body.user_id;
+};
+
 const addCollection = (req, res) => {
   try{
-    const { user_id,wks_id, name } = req.body;
+    const { wks_id, name } = req.body;
+    const user_id = getUserId(req);
 
   if (!user_id || !name || !wks_id) {
     return res.status(400).json({ status: false, message: 'user_id and name are required' });
@@ -44,7 +51,8 @@ const addCollection = (req, res) => {
 
 const addFolder = (req, res) => {
   try {
-    const { user_id, name, collection_id, parent_folder_id = null, workspace_id } = req.body;
+    const { name, collection_id, parent_folder_id = null, workspace_id } = req.body;
+    const user_id = getUserId(req);
 
     if (!user_id || !name || !collection_id) {
       return res.status(400).json({ status: false, message: 'Missing required fields' });
@@ -279,7 +287,7 @@ const getCollections = (req, res) => {
 
 const addRequest = (req, res) => {
   const { collection_id, folder_id, name, method, url, body } = req.body;
-  const user_id = req.session?.user?.id || req.body.user_id;
+  const user_id = getUserId(req);
 
   if (!user_id || !collection_id || !name || !method) {
     return res
@@ -427,8 +435,7 @@ const getRequestsByFolderId = (req, res) => {
 
 const getRequestsByRequestId = (req, res) => {
   const request_id = req.query.request_id;
-
-  const user_id = req.query.user_id;
+  const user_id = getUserId(req);
 
   if (!request_id || !user_id) {
     return res.status(400).json({ status: false, message: "Missing request_id or user_id" });
@@ -477,7 +484,7 @@ const getRequestsByRequestId = (req, res) => {
 // controller
 const updateRequest = (req, res) => {
   const request_id = req.query.request_id;
-  const user_id = req.query.user_id;
+  const user_id = getUserId(req);
   const changes = req.body;
 
   if (!request_id || !user_id) {
@@ -531,7 +538,7 @@ const updateRequest = (req, res) => {
 
 
 const getWorkspaces = (req, res) => {
-  const user_id = req.query.user_id;
+  const user_id = getUserId(req);
 
   if (!user_id) {
     return res.status(400).json({ status: false, message: "Missing user id" });
@@ -550,7 +557,8 @@ const getWorkspaces = (req, res) => {
 };
 
 const createWorkspace = (req, res) => {
-  const { name, user_id, members } = req.body;
+  const { name, members } = req.body;
+  const user_id = getUserId(req);
 
   if (!name || !user_id) {
     return res.json({ status: false, message: "Workspace name and user_id required" });
@@ -750,7 +758,8 @@ const updateWorkspace = (req, res) => {
 };
 
 const deleteWorkspace = (req, res) => {
-  const { workspace_id, user_id } = req.body;
+  const { workspace_id } = req.body;
+  const user_id = getUserId(req);
 
   if (!workspace_id || !user_id) {
     return res.json({ status: false, message: "workspace_id and user_id required" });
