@@ -70,7 +70,7 @@ const addFolder = (req, res) => {
       if (depth >= MAX_FOLDER_DEPTH) {
         return res.status(400).json({ 
           status: false, 
-          message: `Maximum folder depth (${MAX_FOLDER_DEPTH} levels) reached. Cannot create subfolders beyond this level.` 
+          message: `Maximum folder depth level reached. Cannot create subfolders beyond this level.` 
         });
       }
 

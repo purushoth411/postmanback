@@ -242,7 +242,7 @@ const deleteRequest = (id, callback) => {
     if (err) return callback(err);
 
     // Start with deleting from drafts first (using request_id)
-    const draftQuery = 'DELETE FROM tbl_api_drafts WHERE request_id = ?';
+    const draftQuery = 'DELETE FROM tbl_api_requests_draft WHERE request_id = ?';
     connection.query(draftQuery, [id], (err) => {
       if (err) {
         connection.release();
