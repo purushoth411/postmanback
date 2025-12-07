@@ -1,6 +1,7 @@
 const { get } = require('http');
 const apiModel = require('../models/apiModel');
 const { getIO } = require('../socket');
+const { MAX_FOLDER_DEPTH } = require('../constants/folderConstants');
 
 // Helper function to get user_id from authenticated session
 // Falls back to req.body.user_id for backward compatibility during migration
@@ -58,32 +59,49 @@ const addFolder = (req, res) => {
       return res.status(400).json({ status: false, message: 'Missing required fields' });
     }
 
-    apiModel.addFolder(user_id, collection_id, parent_folder_id, name, (err, result) => {
+    // Check folder depth before creating
+    apiModel.getFolderDepth(parent_folder_id, (err, depth) => {
       if (err) {
-        console.error('Error creating folder:', err);
+        console.error('Error calculating folder depth:', err);
         return res.status(500).json({ status: false, message: 'Database error' });
       }
 
-      const folder = {
-        id: result.insertId,
-        collection_id,
-        parent_folder_id,
-        user_id,
-        name,
-        created_at: new Date(),
-        updated_at: new Date(),
-      };
+      // Maximum depth check
+      if (depth >= MAX_FOLDER_DEPTH) {
+        return res.status(400).json({ 
+          status: false, 
+          message: `Maximum folder depth (${MAX_FOLDER_DEPTH} levels) reached. Cannot create subfolders beyond this level.` 
+        });
+      }
 
-      const io = getIO();
-      io.emit('folderAdded', {
-        workspaceId: workspace_id, // add this field
-        folder,                    // wrap data
-      });
+      // Create folder if depth is valid
+      apiModel.addFolder(user_id, collection_id, parent_folder_id, name, (err, result) => {
+        if (err) {
+          console.error('Error creating folder:', err);
+          return res.status(500).json({ status: false, message: 'Database error' });
+        }
 
-      return res.status(201).json({
-        status: true,
-        message: 'Folder added successfully',
-        folder,
+        const folder = {
+          id: result.insertId,
+          collection_id,
+          parent_folder_id,
+          user_id,
+          name,
+          created_at: new Date(),
+          updated_at: new Date(),
+        };
+
+        const io = getIO();
+        io.emit('folderAdded', {
+          workspaceId: workspace_id, // add this field
+          folder,                    // wrap data
+        });
+
+        return res.status(201).json({
+          status: true,
+          message: 'Folder added successfully',
+          folder,
+        });
       });
     });
   } catch (error) {

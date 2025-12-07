@@ -14,6 +14,49 @@ const addCollection = (user_id,wks_id, name, callback) => {
   });
 };
 
+// Helper function to calculate folder depth
+const getFolderDepth = (folder_id, callback) => {
+  if (!folder_id) {
+    // Root level folder (no parent) = level 1
+    return callback(null, 1);
+  }
+
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    let depth = 1;
+    let currentFolderId = folder_id;
+
+    const calculateDepth = () => {
+      const query = 'SELECT parent_folder_id FROM tbl_request_folders WHERE id = ?';
+      connection.query(query, [currentFolderId], (err, rows) => {
+        if (err) {
+          connection.release();
+          return callback(err);
+        }
+
+        if (rows.length === 0) {
+          connection.release();
+          return callback(null, depth);
+        }
+
+        const parentId = rows[0].parent_folder_id;
+        if (parentId === null) {
+          // Reached root level
+          connection.release();
+          return callback(null, depth + 1);
+        }
+
+        depth++;
+        currentFolderId = parentId;
+        calculateDepth();
+      });
+    };
+
+    calculateDepth();
+  });
+};
+
 const addFolder = (user_id, collection_id, parent_folder_id, name, callback) => {
   db.getConnection((err, connection) => {
     if (err) return callback(err);
@@ -1314,6 +1357,7 @@ const deleteGlobalVariable = (id, callback) => {
 module.exports = {
   addCollection,
   addFolder,
+  getFolderDepth,
   renameCollection,
   deleteCollection,
   renameFolder,
