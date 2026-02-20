@@ -841,6 +841,33 @@ const findUserByEmail = (email, callback) => {
   });
 };
 
+// Search users by email or name (for autocomplete)
+const searchUsers = (query, limit = 10, callback) => {
+  db.getConnection((err, connection) => {
+    if (err) return callback(err);
+
+    const searchTerm = `%${query}%`;
+    const sql = `
+      SELECT id, name, email 
+      FROM tbl_users 
+      WHERE email LIKE ? OR name LIKE ?
+      ORDER BY 
+        CASE 
+          WHEN email LIKE ? THEN 1
+          WHEN name LIKE ? THEN 2
+          ELSE 3
+        END
+      LIMIT ?
+    `;
+    connection.query(sql, [searchTerm, searchTerm, `%${query}%`, `%${query}%`, limit], (err, results) => {
+      connection.release();
+      if (err) return callback(err);
+
+      callback(null, results || []);
+    });
+  });
+};
+
 const searchRequests = (workspaceId, query, callback) => {
   db.getConnection((err, connection) => {
     if (err) return callback(err);
@@ -1374,6 +1401,7 @@ module.exports = {
   getWorkspaces,
   getCollectionsByWorkspace,
   findUserByEmail,
+  searchUsers,
   createWorkspace,
   addMember,
   getWorkspaceById,

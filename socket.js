@@ -19,7 +19,32 @@ module.exports = {
             // Register userId to socketId mapping
             socket.on("registerUser", (userId) => {
                 connectedUsers[userId] = socket.id;
+                socket.join(`user:${userId}`); // Join user-specific room for notifications
                 console.log(`User registered: ${userId} -> ${socket.id}`);
+            });
+
+            // Join workspace room for chat
+            socket.on("joinWorkspace", (workspaceId) => {
+                socket.join(`workspace:${workspaceId}`);
+                console.log(`Socket ${socket.id} joined workspace: ${workspaceId}`);
+            });
+
+            // Leave workspace room
+            socket.on("leaveWorkspace", (workspaceId) => {
+                socket.leave(`workspace:${workspaceId}`);
+                console.log(`Socket ${socket.id} left workspace: ${workspaceId}`);
+            });
+
+            // Join channel room for real-time updates
+            socket.on("joinChannel", (channelId) => {
+                socket.join(`channel:${channelId}`);
+                console.log(`Socket ${socket.id} joined channel: ${channelId}`);
+            });
+
+            // Leave channel room
+            socket.on("leaveChannel", (channelId) => {
+                socket.leave(`channel:${channelId}`);
+                console.log(`Socket ${socket.id} left channel: ${channelId}`);
             });
 
             // Cleanup on disconnect

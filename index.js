@@ -95,8 +95,8 @@ app.use(sanitizeInput);
 
 
 const userRoutes = require('./routes/userRoutes');
-
 const apiRoutes = require('./routes/apiRoutes');
+const chatRoutes = require('./routes/chatRoutes');
 const authMiddleware = require('./middleware/auth');
 
 // Public routes (no authentication required)
@@ -105,6 +105,7 @@ app.use('/api/users', loginLimiter, userRoutes); // Rate limit login attempts
 // Protected routes (authentication required)
 
 app.use('/api/api', apiLimiter, authMiddleware, apiRoutes);
+app.use('/api/chat', apiLimiter, chatRoutes);
 
 
 

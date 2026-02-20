@@ -577,6 +577,7 @@ const getWorkspaces = (req, res) => {
 const createWorkspace = (req, res) => {
   const { name, members } = req.body;
   const user_id = getUserId(req);
+  const chatModel = require('../models/chatModel');
 
   if (!name || !user_id) {
     return res.json({ status: false, message: "Workspace name and user_id required" });
@@ -589,40 +590,144 @@ const createWorkspace = (req, res) => {
       return res.json({ status: false, message: "Error creating workspace" });
     }
 
-    // Step 2: add creator as OWNER
-    apiModel.addMember(workspaceId, user_id, "OWNER", (err) => {
-      if (err) {
-        console.error("DB Error:", err);
-        return res.json({ status: false, message: "Error adding owner" });
-      }
+    // Step 2: Create default chat channel
+    chatModel.createDefaultChannel(workspaceId, user_id, (err) => {
+      if (err) console.error("Error creating default channel:", err);
 
-      // Step 3: loop through members
-      if (members && members.length > 0) {
-        members.forEach((m) => {
-          if (!m.email || !m.role) return; // skip empty row
+      // Step 3: add creator as OWNER
+      apiModel.addMember(workspaceId, user_id, "OWNER", (err) => {
+        if (err) {
+          console.error("DB Error:", err);
+          return res.json({ status: false, message: "Error adding owner" });
+        }
 
-          apiModel.findUserByEmail(m.email, (err, user) => {
-            if (err) return console.error("DB Error:", err);
-            if (!user) return console.log(`User not found: ${m.email}`);
+        // Step 4: loop through members and add them
+        const memberIds = [];
+        if (members && members.length > 0) {
+          let processed = 0;
+          const totalMembers = members.filter(m => m.email && m.role).length;
 
-            apiModel.addMember(workspaceId, user.id, m.role, (err) => {
-              if (err) console.error("DB Error:", err);
+          members.forEach((m) => {
+            // Trim and validate email
+            const email = m.email ? m.email.trim() : '';
+            if (!email || !m.role) {
+              processed++;
+              if (processed === totalMembers) {
+                finishWorkspaceCreation();
+              }
+              return; // skip empty row
+            }
+
+            // Basic email validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+              processed++;
+              console.log(`Invalid email format: ${email}`);
+              if (processed === totalMembers) {
+                finishWorkspaceCreation();
+              }
+              return;
+            }
+
+            apiModel.findUserByEmail(email, (err, user) => {
+              if (err) {
+                processed++;
+                console.error("DB Error:", err);
+                if (processed === totalMembers) {
+                  finishWorkspaceCreation();
+                }
+                return;
+              }
+              if (!user) {
+                processed++;
+                console.log(`User not found: ${email}`);
+                if (processed === totalMembers) {
+                  finishWorkspaceCreation();
+                }
+                return;
+              }
+
+              memberIds.push(user.id);
+
+              apiModel.addMember(workspaceId, user.id, m.role, (err) => {
+                if (err) console.error("DB Error:", err);
+                
+                // Create notification for added member
+                chatModel.createNotification(
+                  user.id,
+                  workspaceId,
+                  'member_added',
+                  `You were added to workspace "${name}"`,
+                  `You have been added as ${m.role} to the workspace "${name}"`,
+                  user_id,
+                  null,
+                  (err) => {
+                    if (err) console.error("Error creating notification:", err);
+                  }
+                );
+
+                // Emit notification socket event
+                const io = getIO();
+                io.to(`user:${user.id}`).emit('notification', {
+                  type: 'member_added',
+                  workspaceId: workspaceId,
+                  workspaceName: name,
+                });
+
+                processed++;
+                if (processed === totalMembers) {
+                  finishWorkspaceCreation();
+                }
+              });
             });
           });
-        });
-      }
 
-      // Emit socket event
-      const io = getIO();
-      io.emit('workspaceCreated', {
-        userId: user_id,
-        workspace: { id: workspaceId, name }
-      });
+          if (totalMembers === 0) {
+            finishWorkspaceCreation();
+          }
+        } else {
+          finishWorkspaceCreation();
+        }
 
-      return res.json({
-        status: true,
-        message: "Workspace created successfully",
-        workspace: { id: workspaceId, name },
+        function finishWorkspaceCreation() {
+          // Get full workspace details with members
+          apiModel.getWorkspaceById(workspaceId, (err, workspace) => {
+            if (err) {
+              console.error("Error fetching workspace:", err);
+            }
+
+            apiModel.getWorkspaceMembers(workspaceId, (err, members) => {
+              const workspaceData = {
+                id: workspaceId,
+                name: name,
+                user_id: user_id,
+                members: members || []
+              };
+
+              const io = getIO();
+              
+              // Emit to creator
+              io.to(`user:${user_id}`).emit('workspaceCreated', {
+                userId: user_id,
+                workspace: workspaceData
+              });
+
+              // Emit to all added members so they see the workspace in their list
+              memberIds.forEach(memberId => {
+                io.to(`user:${memberId}`).emit('workspaceCreated', {
+                  userId: memberId,
+                  workspace: workspaceData
+                });
+              });
+
+              return res.json({
+                status: true,
+                message: "Workspace created successfully",
+                workspace: workspaceData,
+              });
+            });
+          });
+        }
       });
     });
   });
@@ -1249,6 +1354,28 @@ const updateGlobalVariable = (req, res) => {
 };
 
 // Delete global variable
+// Search users for autocomplete
+const searchUsers = (req, res) => {
+  const { q } = req.query;
+  const limit = parseInt(req.query.limit) || 10;
+
+  if (!q || q.length < 2) {
+    return res.json({ status: true, users: [] });
+  }
+
+  apiModel.searchUsers(q, limit, (err, users) => {
+    if (err) {
+      console.error("Error searching users:", err);
+      return res.status(500).json({ status: false, message: "Database error" });
+    }
+
+    return res.json({
+      status: true,
+      users: users || []
+    });
+  });
+};
+
 const deleteGlobalVariable = (req, res) => {
   const { id, workspace_id } = req.body;
 
@@ -1324,4 +1451,5 @@ module.exports = {
   addGlobalVariable,
   updateGlobalVariable,
   deleteGlobalVariable,
+  searchUsers,
 };
