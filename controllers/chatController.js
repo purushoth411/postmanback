@@ -11,11 +11,11 @@ const extractMentions = (message) => {
   const mentionRegex = /@(\w+)/g;
   const mentions = [];
   let match;
-  
+
   while ((match = mentionRegex.exec(message)) !== null) {
     mentions.push(match[1]); // Extract username
   }
-  
+
   return [...new Set(mentions)]; // Remove duplicates
 };
 
@@ -159,8 +159,8 @@ const sendMessage = (req, res) => {
         // Match usernames to user IDs
         const mentionedUserIds = [];
         mentionedUsernames.forEach(username => {
-          const member = members.find(m => 
-            m.name.toLowerCase() === username.toLowerCase() || 
+          const member = members.find(m =>
+            m.name.toLowerCase() === username.toLowerCase() ||
             m.email.toLowerCase() === username.toLowerCase()
           );
           if (member) {
