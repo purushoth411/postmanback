@@ -9,7 +9,7 @@ var connection = mysql.createPool({
     charset: 'utf8mb4',
     connectTimeout: 20000, 
     timezone: process.env.DB_TIMEZONE || 'Asia/Kolkata',
-    port: process.env.DB_PORT || 3307,
+    port: process.env.DB_PORT || 3306,
 });
 
 // Helper to get a connection and execute a query
