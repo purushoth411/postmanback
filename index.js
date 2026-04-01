@@ -33,7 +33,7 @@ app.use(helmet({
 // CORS Configuration - Allow your frontend origin
 // This won't block API testing in your Postman clone
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "http://localhost:5173", // Your React app URL
+  origin: process.env.FRONTEND_URL || "https://purushothaman.co.in/postmon/", // Your React app URL
   credentials: true, // Allow cookies/sessions
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -42,11 +42,11 @@ app.use(cors(corsOptions));
 
 // Session Configuration
 const sessionStore = new MySQLStore({
-  host: process.env.DB_HOST || "localhost",
-  port: process.env.DB_PORT || 3307,
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "postman",
+  host: process.env.DB_HOST || "46.202.161.177",
+  port: process.env.DB_PORT || 3306,
+  user: process.env.DB_USER || "u243066904_postmon",
+  password: process.env.DB_PASSWORD || "@Postmon123",
+  database: process.env.DB_NAME || "u243066904_postmon",
   clearExpired: true,
   checkExpirationInterval: 900000, // 15 minutes
   expiration: 86400000, // 24 hours

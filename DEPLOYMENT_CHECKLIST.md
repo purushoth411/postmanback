@@ -58,7 +58,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
 ### 3. Update Frontend API URL
-Update all `http://localhost:5000` references in your frontend to your production backend URL.
+Update all `https://purushothaman.co.in/postmon/` references in your frontend to your production backend URL.
 
 ### 4. Update CORS Origin
 Set `FRONTEND_URL` in `.env` to your production frontend URL.

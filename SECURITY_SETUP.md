@@ -13,11 +13,11 @@ NODE_ENV=development
 FRONTEND_URL=https://purushothaman.co.in/postmon/
 
 # Database Configuration
-DB_HOST=localhost
-DB_PORT=3307
-DB_USER=root
-DB_PASSWORD=your_database_password
-DB_NAME=postman
+DB_HOST=46.202.161.177
+DB_PORT=3306
+DB_USER=u243066904_postmon
+DB_PASSWORD=@Postmon123
+DB_NAME=u243066904_postmon
 DB_TIMEZONE=Asia/Kolkata
 
 # Session Secret (IMPORTANT: Change this in production!)
