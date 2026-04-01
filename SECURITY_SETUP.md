@@ -10,7 +10,7 @@ PORT=5500
 NODE_ENV=development
 
 # Frontend URL (for CORS) - Update this to your production frontend URL
-FRONTEND_URL=http://localhost:5173
+FRONTEND_URL=https://purushothaman.co.in/postmon/
 
 # Database Configuration
 DB_HOST=localhost
