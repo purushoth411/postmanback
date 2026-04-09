@@ -34,7 +34,7 @@ app.use(helmet({
 // This won't block API testing in your Postman clone
 const corsOptions = {
   //origin: process.env.FRONTEND_URL || "https://purushothaman.co.in", // Your React app URL
-  origin: "*", // Allow all origins for testing (change in production)
+  origin: true, // Allow all origins for testing (change in production)
   credentials: true, // Allow cookies/sessions
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
