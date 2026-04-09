@@ -33,7 +33,8 @@ app.use(helmet({
 // CORS Configuration - Allow your frontend origin
 // This won't block API testing in your Postman clone
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "https://purushothaman.co.in", // Your React app URL
+  //origin: process.env.FRONTEND_URL || "https://purushothaman.co.in", // Your React app URL
+  origin: "*", // Allow all origins for testing (change in production)
   credentials: true, // Allow cookies/sessions
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -64,7 +65,8 @@ app.use(
       maxAge: 86400000, // 24 hours
       httpOnly: true, // Prevents XSS attacks
       secure: process.env.NODE_ENV === "production", // HTTPS only in production
-      sameSite: "lax", // CSRF protection
+      //sameSite: "lax", // CSRF protection
+      sameSite: "none", // Allow cross-site cookies for Socket.IO in development and production
     },
   })
 );
