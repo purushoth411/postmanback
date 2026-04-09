@@ -39,7 +39,7 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
+app.options("/{*splat}", cors(corsOptions));
 
 // Session Configuration
 const sessionStore = new MySQLStore({
