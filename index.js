@@ -33,12 +33,13 @@ app.use(helmet({
 // CORS Configuration - Allow your frontend origin
 // This won't block API testing in your Postman clone
 const corsOptions = {
-  origin: process.env.FRONTEND_URL || "https://purushothaman.co.in/postmon/", // Your React app URL
+  origin: process.env.FRONTEND_URL || "https://purushothaman.co.in", // Your React app URL
   credentials: true, // Allow cookies/sessions
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 };
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 
 // Session Configuration
 const sessionStore = new MySQLStore({
