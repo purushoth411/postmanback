@@ -64,7 +64,7 @@ app.use(
     cookie: {
       maxAge: 86400000, // 24 hours
       httpOnly: true, // Prevents XSS attacks
-      secure: process.env.NODE_ENV === "production", // HTTPS only in production
+      secure: true, // Required when sameSite: "none" - set to true even in development for cookies to work
       //sameSite: "lax", // CSRF protection
       sameSite: "none", // Allow cross-site cookies for Socket.IO in development and production
     },
