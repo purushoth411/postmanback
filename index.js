@@ -58,15 +58,14 @@ app.use(
   session({
     key: "session_cookie_name",
     secret: process.env.SESSION_SECRET || "your-secret-key-change-this-in-production",
-    // store: sessionStore,
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
       maxAge: 86400000, // 24 hours
-      httpOnly: true, // Prevents XSS attacks
-      secure: true, // Required when sameSite: "none" - set to true even in development for cookies to work
-      //sameSite: "lax", // CSRF protection
-      sameSite: "none", // Allow cross-site cookies for Socket.IO in development and production
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
     },
   })
 );
