@@ -94,6 +94,23 @@ const validateInput = {
       .isInt({ min: 1 })
       .withMessage('Invalid workspace ID'),
   ],
+  
+  // Request
+  request: [
+    body('name')
+      .trim()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Request name must be between 1 and 100 characters'),
+    body('method')
+      .optional()
+      .isIn(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'])
+      .withMessage('Invalid HTTP method'),
+    body('url')
+      .optional()
+      .trim()
+      .isLength({ max: 2048 })
+      .withMessage('URL is too long'),
+  ],
 };
 const checkValidation = (req, res, next) => {
   const errors = validationResult(req);
