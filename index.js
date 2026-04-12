@@ -58,7 +58,7 @@ app.use(
   session({
     key: "session_cookie_name",
     secret: process.env.SESSION_SECRET || "your-secret-key-change-this-in-production",
-    store: sessionStore,
+    // store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
