@@ -62,19 +62,39 @@ const validateInput = {
       .withMessage('Invalid collection ID'),
   ],
 
-  // Request
-  request: [
+  // Environment
+  environment: [
     body('name')
       .trim()
-      .isLength({ min: 1, max: 200 })
-      .withMessage('Request name must be between 1 and 200 characters'),
-    body('method')
-      .isIn(['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS'])
-      .withMessage('Invalid HTTP method'),
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Environment name must be between 1 and 100 characters'),
+    body('workspace_id')
+      .isInt({ min: 1 })
+      .withMessage('Invalid workspace ID'),
+  ],
+
+  // Environment Variable
+  environmentVariable: [
+    body('key')
+      .trim()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Variable key must be between 1 and 100 characters'),
+    body('environment_id')
+      .isInt({ min: 1 })
+      .withMessage('Invalid environment ID'),
+  ],
+
+  // Global Variable
+  globalVariable: [
+    body('key')
+      .trim()
+      .isLength({ min: 1, max: 100 })
+      .withMessage('Variable key must be between 1 and 100 characters'),
+    body('workspace_id')
+      .isInt({ min: 1 })
+      .withMessage('Invalid workspace ID'),
   ],
 };
-
-// Middleware to check validation results
 const checkValidation = (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
