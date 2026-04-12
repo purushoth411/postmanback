@@ -44,7 +44,7 @@ app.options("/{*splat}", cors(corsOptions));
 
 // Session Configuration
 const sessionStore = new MySQLStore({
-  host: process.env.DB_HOST || "46.202.161.177",
+  host: process.env.DB_HOST || "193.203.184.196",
   port: process.env.DB_PORT || 3306,
   user: process.env.DB_USER || "u243066904_postmon",
   password: process.env.DB_PASSWORD || "@Postmon123",

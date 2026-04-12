@@ -13,7 +13,7 @@ NODE_ENV=development
 FRONTEND_URL=https://purushothaman.co.in/postmon/
 
 # Database Configuration
-DB_HOST=46.202.161.177
+DB_HOST=193.203.184.196
 DB_PORT=3306
 DB_USER=u243066904_postmon
 DB_PASSWORD=@Postmon123

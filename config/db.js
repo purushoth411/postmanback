@@ -2,7 +2,7 @@ var mysql = require('mysql');
 
 var pool = mysql.createPool({
     connectionLimit: 10, // ✅ 100 is too high for shared hosting
-    host: process.env.DB_HOST || '46.202.161.177',
+    host: process.env.DB_HOST || '193.203.184.196',
     user: process.env.DB_USER || 'u243066904_postmon',
     password: process.env.DB_PASSWORD || '@Postmon123',
     database: process.env.DB_NAME || 'u243066904_postmon',
